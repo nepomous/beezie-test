@@ -1,5 +1,7 @@
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
+import mockReward from "../assets/mock_reward.png";
+import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { colors } from "../theme/colors";
 import type { ClawItem } from "../types/claw";
@@ -29,6 +31,7 @@ export function RevealSingleModal({
   itemCount,
 }: RevealSingleModalProps) {
   const { isMobile } = useResponsive();
+  const { credit } = useWallet();
 
   if (!item) return null;
 
@@ -39,8 +42,8 @@ export function RevealSingleModal({
   };
 
   const handleSwapNow = () => {
-    // TODO: call real API to credit `item.fairMarketValue` to the user's wallet.
-    console.log("Swap now, credited to wallet:", item.fairMarketValue);
+    // TODO: call real API to persist the swap once a backend exists.
+    credit(item.fairMarketValue);
     onClose();
   };
 
@@ -69,7 +72,7 @@ export function RevealSingleModal({
             style={[styles.imageColumn, !isMobile && styles.imageColumnDesktop]}
           >
             <Image
-              source={{ uri: item.imageUrl }}
+              source={mockReward}
               style={styles.image}
               resizeMode="cover"
             />

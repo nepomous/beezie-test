@@ -53,6 +53,10 @@ on all three platforms.
 - Co-locate tests next to the code they test in a `__tests__` folder, or in
   the repository-root `__tests__` folder for top-level app tests.
 - Keep `App.tsx` as a thin composition root; put real logic in `src/`.
+- The app's UI must be entirely in English. Whenever adding or editing any
+  user-facing string (labels, buttons, error/status messages, alerts,
+  placeholders, etc.), double-check it is written in English before
+  submitting — regardless of the language used in the prompt or request.
 
 ## Before submitting changes
 

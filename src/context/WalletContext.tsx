@@ -15,6 +15,8 @@ interface WalletContextValue {
   canAfford: (amount: number) => boolean;
   /** Deducts `amount` from the balance. Caller must check `canAfford` first. */
   deduct: (amount: number) => void;
+  /** Adds `amount` to the balance. */
+  credit: (amount: number) => void;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -32,9 +34,13 @@ export function WalletProvider({ children }: PropsWithChildren) {
     setBalance((current) => current - amount);
   }, []);
 
+  const credit = useCallback((amount: number) => {
+    setBalance((current) => current + amount);
+  }, []);
+
   const value = useMemo(
-    () => ({ balance, canAfford, deduct }),
-    [balance, canAfford, deduct],
+    () => ({ balance, canAfford, deduct, credit }),
+    [balance, canAfford, deduct, credit],
   );
 
   return (

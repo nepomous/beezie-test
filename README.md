@@ -39,9 +39,11 @@ to a two-column presentation on wider tablet and Web viewports.
 
 ## Implementation status
 
-- Payment is represented by `PaymentModalPlaceholder` and always uses the
-  mocked Beezie wallet. Wallet selection, card payments, and promo codes are
-  not connected to real services.
+- Payment is represented by `PaymentModal`, supporting the Beezie wallet
+  (real balance/deduction), a placeholder external wallet (always $0, so it's
+  disabled), and a simulated credit/debit flow via
+  `CreditDebitSimulationModal`. Promo codes are not connected to real
+  services.
 - Pull results are generated locally by `src/services/clawService.ts` using the
   machine's rarity weights and item pool.
 - A pull has a shared 15-minute reveal window in the service model.

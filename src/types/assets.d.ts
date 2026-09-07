@@ -3,6 +3,11 @@ declare module "*.png" {
   export default asset;
 }
 
+declare module "*.webp" {
+  const asset: number;
+  export default asset;
+}
+
 declare module "*.svg" {
   import type { FC } from "react";
   import type { SvgProps } from "react-native-svg";

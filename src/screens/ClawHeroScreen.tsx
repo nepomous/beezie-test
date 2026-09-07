@@ -15,10 +15,12 @@ import mockPackageSmall from "../assets/mock_package_small.png";
 import { MachineIdleVideo } from "../components/MachineIdleVideo";
 import { MoreClawMachines } from "../components/MoreClawMachines";
 import { OddsTable } from "../components/OddsTable";
-import { PaymentModalPlaceholder } from "../components/PaymentModalPlaceholder";
+import { PaymentModal } from "../components/PaymentModal";
 import { QuantityStepper } from "../components/QuantityStepper";
+import { RevealMultipleModal } from "../components/RevealMultipleModal";
 import { ResponsiveContainer } from "../components/ResponsiveContainer";
 import { RevealSingleModal } from "../components/RevealSingleModal";
+import { WhatYouCanPullScreen } from "../components/WhatYouCanPullScreen";
 import { useResponsive } from "../hooks/useResponsive";
 import type { ClawMachineSummary } from "../mocks/clawMachines";
 import {
@@ -44,6 +46,9 @@ export function ClawHeroScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [pendingPullResult, setPendingPullResult] = useState<PullResult | null>(
+    null,
+  );
   const [activePullResult, setActivePullResult] = useState<PullResult | null>(
     null,
   );
@@ -235,18 +240,29 @@ export function ClawHeroScreen() {
         </ResponsiveContainer>
       </ScrollView>
 
-      <PaymentModalPlaceholder
+      <PaymentModal
         visible={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
         onConfirm={(result) => {
           setIsPaymentOpen(false);
-          setActivePullResult(result);
+          setPendingPullResult(result);
         }}
         machineId={machine.id}
         machineName={machine.name}
         quantity={quantity}
         totalPrice={totalPrice}
+        pointsPerPull={machine.pointsPerPull}
       />
+
+      {pendingPullResult && (
+        <WhatYouCanPullScreen
+          itemPool={machine.itemPool}
+          onContinue={() => {
+            setActivePullResult(pendingPullResult);
+            setPendingPullResult(null);
+          }}
+        />
+      )}
 
       {activePullResult && (
         <ClawOpeningAnimation
@@ -259,22 +275,32 @@ export function ClawHeroScreen() {
         />
       )}
 
-      <RevealSingleModal
-        visible={!!revealResult}
-        item={revealResult?.items[revealIndex] ?? null}
-        itemIndex={revealIndex}
-        itemCount={revealResult?.items.length}
-        onClose={() => {
-          // TODO: replace this one-at-a-time loop with a real grid
-          // RevealMultipleModal (select-all + batch swap) per SPEC.md.
-          if (revealResult && revealIndex < revealResult.items.length - 1) {
-            setRevealIndex((current) => current + 1);
-          } else {
+      {revealResult && revealResult.items.length > 1 ? (
+        <RevealMultipleModal
+          visible
+          items={revealResult.items}
+          expiresAt={revealResult.expiresAt}
+          onClose={() => {
             setRevealResult(null);
             setRevealIndex(0);
-          }
-        }}
-      />
+          }}
+        />
+      ) : (
+        <RevealSingleModal
+          visible={!!revealResult}
+          item={revealResult?.items[revealIndex] ?? null}
+          itemIndex={revealIndex}
+          itemCount={revealResult?.items.length}
+          onClose={() => {
+            if (revealResult && revealIndex < revealResult.items.length - 1) {
+              setRevealIndex((current) => current + 1);
+            } else {
+              setRevealResult(null);
+              setRevealIndex(0);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }
