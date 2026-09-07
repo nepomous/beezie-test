@@ -12,7 +12,7 @@ export interface ClawItem {
   id: string;
   name: string;
   imageUrl: string;
-  fairMarketValue: number; // usado como "Swap Value"
+  fairMarketValue: number; // used as "Swap Value"
   rarity: Rarity;
 }
 
@@ -21,19 +21,19 @@ export interface ClawMachine {
   name: string; // "Pokémon Gold Claw"
   description: string;
   heroImageUrl: string;
-  videoOpeningUrl: string; // asset local ou remoto
+  videoOpeningUrl: string; // local or remote asset
   pricePerPull: number;
   pointsPerPull: number;
   averageValue: number;
   odds: OddsTier[];
-  itemPool: ClawItem[]; // usado para sortear + para "Top Items"
+  itemPool: ClawItem[]; // used for draws and for "Top Items"
 }
 
 export interface RecentPull {
   id: string;
   item: ClawItem;
   userDisplayName: string;
-  paidValue: number; // "$100" mostrado na lista
+  paidValue: number; // "$100" shown in the list
   timestamp: string;
 }
 
@@ -44,8 +44,8 @@ export interface Wallet {
 
 export interface PullResult {
   pullId: string;
-  items: ClawItem[]; // 1 ou N
-  expiresAt: number; // epoch ms — usado no countdown
+  items: ClawItem[]; // 1 or N
+  expiresAt: number; // epoch ms - used for the countdown
 }
 
 export type PaymentMethod =

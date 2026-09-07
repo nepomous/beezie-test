@@ -10,13 +10,22 @@ import {
 } from "react-native";
 
 import { ClawOpeningAnimation } from "../components/ClawOpeningAnimation";
+import mockPackageLarge from "../assets/mock_package_large.png";
+import mockPackageSmall from "../assets/mock_package_small.png";
+import { MachineIdleVideo } from "../components/MachineIdleVideo";
+import { MoreClawMachines } from "../components/MoreClawMachines";
 import { OddsTable } from "../components/OddsTable";
 import { PaymentModalPlaceholder } from "../components/PaymentModalPlaceholder";
 import { QuantityStepper } from "../components/QuantityStepper";
 import { ResponsiveContainer } from "../components/ResponsiveContainer";
 import { RevealSingleModal } from "../components/RevealSingleModal";
 import { useResponsive } from "../hooks/useResponsive";
-import { getClawMachine, getRecentPulls } from "../services/clawService";
+import type { ClawMachineSummary } from "../mocks/clawMachines";
+import {
+  getClawMachine,
+  getMoreClawMachines,
+  getRecentPulls,
+} from "../services/clawService";
 import { colors } from "../theme/colors";
 import type { ClawMachine, PullResult, RecentPull } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
@@ -29,6 +38,9 @@ export function ClawHeroScreen() {
   const { isMobile } = useResponsive();
   const [machine, setMachine] = useState<ClawMachine | null>(null);
   const [recentPulls, setRecentPulls] = useState<RecentPull[]>([]);
+  const [moreClawMachines, setMoreClawMachines] = useState<
+    ClawMachineSummary[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -46,11 +58,13 @@ export function ClawHeroScreen() {
     Promise.all([
       getClawMachine(DEFAULT_MACHINE_ID),
       getRecentPulls(DEFAULT_MACHINE_ID),
+      getMoreClawMachines(),
     ])
-      .then(([machineData, pullsData]) => {
+      .then(([machineData, pullsData, moreMachinesData]) => {
         if (!isMounted) return;
         setMachine(machineData);
         setRecentPulls(pullsData);
+        setMoreClawMachines(moreMachinesData);
         setIsLoading(false);
       })
       .catch((error: unknown) => {
@@ -58,7 +72,7 @@ export function ClawHeroScreen() {
         setLoadError(
           error instanceof Error
             ? error.message
-            : "Não foi possível carregar a máquina de garra.",
+            : "Unable to load the claw machine.",
         );
         setIsLoading(false);
       });
@@ -71,7 +85,7 @@ export function ClawHeroScreen() {
   if (loadError) {
     return (
       <View style={[styles.screen, styles.centered]}>
-        <Text style={styles.errorTitle}>Algo deu errado</Text>
+        <Text style={styles.errorTitle}>Something went wrong</Text>
         <Text style={styles.errorMessage}>{loadError}</Text>
         <Pressable
           style={styles.retryButton}
@@ -81,7 +95,7 @@ export function ClawHeroScreen() {
             setLoadAttempt((attempt) => attempt + 1);
           }}
         >
-          <Text style={styles.retryButtonText}>Tentar novamente</Text>
+          <Text style={styles.retryButtonText}>Try again</Text>
         </Pressable>
       </View>
     );
@@ -114,11 +128,7 @@ export function ClawHeroScreen() {
                 !isMobile && styles.machineColumnDesktop,
               ]}
             >
-              <Image
-                source={{ uri: machine.heroImageUrl }}
-                style={styles.machineImage}
-                resizeMode="cover"
-              />
+              <MachineIdleVideo style={styles.machineImage} />
             </View>
 
             <View
@@ -161,6 +171,8 @@ export function ClawHeroScreen() {
                   <Text style={styles.startButtonText}>Start Now</Text>
                 </Pressable>
               </View>
+
+              <MoreClawMachines machines={moreClawMachines} />
             </View>
           </View>
 
@@ -179,7 +191,7 @@ export function ClawHeroScreen() {
                     ]}
                   >
                     <Image
-                      source={{ uri: item.imageUrl }}
+                      source={mockPackageLarge}
                       style={styles.topItemImage}
                       resizeMode="cover"
                     />
@@ -200,7 +212,7 @@ export function ClawHeroScreen() {
                 {recentPulls.map((pull) => (
                   <View key={pull.id} style={styles.recentPullRow}>
                     <Image
-                      source={{ uri: pull.item.imageUrl }}
+                      source={mockPackageSmall}
                       style={styles.recentPullImage}
                       resizeMode="cover"
                     />
@@ -324,8 +336,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   machineImage: {
-    width: "100%",
-    aspectRatio: 1,
     borderRadius: 16,
     backgroundColor: colors.surface,
   },

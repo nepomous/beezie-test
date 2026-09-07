@@ -6,7 +6,7 @@ const itemByName = (name: string) => {
     (candidate) => candidate.name === name,
   );
   if (!item) {
-    throw new Error(`Item mockado não encontrado: ${name}`);
+    throw new Error(`Mock item not found: ${name}`);
   }
   return item;
 };

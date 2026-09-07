@@ -148,7 +148,7 @@ export const pokemonGoldClaw: ClawMachine = {
   id: "pokemon-gold-claw",
   name: "Pokémon Gold Claw",
   description:
-    "Uma garra dourada recheada de cards Pokémon raros. Cada puxada garante um item físico, do comum ao ultra-raro.",
+    "A golden claw machine filled with rare Pokémon cards. Every pull guarantees a physical item, from common to ultra-rare.",
   heroImageUrl:
     "https://placehold.co/800x800/0d0d0d/F5C518.png?text=Pok%C3%A9mon+Gold+Claw",
   videoOpeningUrl: "/assets/videos/claw-opening.mp4",
@@ -163,23 +163,35 @@ export const clawMachines: ClawMachine[] = [pokemonGoldClaw];
 
 export const moreClawMachines: ClawMachineSummary[] = [
   {
-    id: "one-piece-legends-claw",
-    name: "One Piece Legends Claw",
+    id: "tcg-platinum-claw-1",
+    name: "TCG Platinum",
     heroImageUrl:
-      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=One+Piece+Legends",
-    pricePerPull: 150,
-    averageValue: 130,
+      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=TCG+Platinum",
+    pricePerPull: 500,
+    averageValue: 505,
   },
   {
-    id: "sneaker-vault-claw",
-    name: "Sneaker Vault Claw",
+    id: "tcg-platinum-claw-2",
+    name: "TCG Platinum",
     heroImageUrl:
-      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=Sneaker+Vault",
-    pricePerPull: 75,
-    averageValue: 60,
+      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=TCG+Platinum",
+    pricePerPull: 500,
+    averageValue: 505,
+  },
+  {
+    id: "wildcard-claw",
+    name: "Wildcard",
+    heroImageUrl:
+      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=Wildcard",
+    pricePerPull: 30,
+    averageValue: 25,
   },
 ];
 
 export function getClawMachineById(id: string): ClawMachine | undefined {
   return clawMachines.find((machine) => machine.id === id);
+}
+
+export function getMoreClawMachines(): ClawMachineSummary[] {
+  return moreClawMachines;
 }

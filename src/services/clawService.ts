@@ -1,4 +1,8 @@
-import { getClawMachineById } from "../mocks/clawMachines";
+import {
+  getClawMachineById,
+  getMoreClawMachines as getMoreClawMachinesMock,
+} from "../mocks/clawMachines";
+import type { ClawMachineSummary } from "../mocks/clawMachines";
 import { getRecentPullsByMachineId } from "../mocks/recentPulls";
 import type {
   ClawItem,
@@ -11,7 +15,7 @@ import type {
   Wallet,
 } from "../types/claw";
 
-const REVEAL_WINDOW_MS = 15 * 60 * 1000; // 15 minutos para decidir swap/keep
+const REVEAL_WINDOW_MS = 15 * 60 * 1000; // 15 minutes to decide whether to swap or keep
 
 const mockWallet: Wallet = {
   beezieBalance: 2500,
@@ -23,7 +27,7 @@ function randomDelay(minMs = 300, maxMs = 600): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Sorteia uma raridade respeitando os pesos de `chancePercent` (normalizados para 100%). */
+/** Selects a rarity using `chancePercent` weights (normalized to 100%). */
 function pickWeightedRarity(odds: OddsTier[]): Rarity {
   const totalWeight = odds.reduce((sum, tier) => sum + tier.chancePercent, 0);
   let roll = Math.random() * totalWeight;
@@ -42,7 +46,7 @@ function pickRandomItem<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/** Sorteia um item do pool respeitando as odds da máquina; cai para qualquer item se a raridade sorteada não tiver itens no pool. */
+/** Selects an item using the machine odds, falling back to any pool item when needed. */
 function drawItem(machine: ClawMachine): ClawItem {
   const rarity = pickWeightedRarity(machine.odds);
   const candidates = machine.itemPool.filter((item) => item.rarity === rarity);
@@ -54,7 +58,7 @@ export async function getClawMachine(id: string): Promise<ClawMachine> {
 
   const machine = getClawMachineById(id);
   if (!machine) {
-    throw new Error(`Claw machine não encontrada: ${id}`);
+    throw new Error(`Claw machine not found: ${id}`);
   }
 
   return machine;
@@ -63,6 +67,11 @@ export async function getClawMachine(id: string): Promise<ClawMachine> {
 export async function getRecentPulls(machineId: string): Promise<RecentPull[]> {
   await randomDelay();
   return getRecentPullsByMachineId(machineId);
+}
+
+export async function getMoreClawMachines(): Promise<ClawMachineSummary[]> {
+  await randomDelay();
+  return getMoreClawMachinesMock();
 }
 
 export async function getWallet(): Promise<Wallet> {
@@ -79,10 +88,10 @@ export async function purchasePull(
 
   const machine = getClawMachineById(machineId);
   if (!machine) {
-    throw new Error(`Claw machine não encontrada: ${machineId}`);
+    throw new Error(`Claw machine not found: ${machineId}`);
   }
   if (quantity < 1) {
-    throw new Error("A quantidade da pull deve ser ao menos 1.");
+    throw new Error("Pull quantity must be at least 1.");
   }
 
   const items = Array.from({ length: quantity }, () => drawItem(machine));

@@ -1,21 +1,21 @@
-## 1. Especificação funcional detalhada (extraída dos seus prints, para você conferir antes de rodar os prompts)
+## 1. Detailed functional specification (based on the reference screenshots)
 
-| Tela | Desktop | Mobile |
+| Screen | Desktop | Mobile |
 | -------------------- | | |
-| **Hero / Claw Page** | Header com nav (Marketplace, Claw, Leaderboard, Resources, More), saldo e avatar no topo direito. Grade 2 colunas: máquina à esquerda, painel de compra à direita (nome, descrição, preço + pontos, stepper, promo code, tabela de odds, "More Claw Machines"). Abaixo, 2 colunas: "Top Items" (grade 3xN) e "Recent Pulls" (lista). | Empilhado verticalmente: hexágono/logo, imagem da máquina, card de compra (nome, preço, promo code, odds, stepper + Start Now). |
-| **Payment** | Modal centralizado "Review & pay": coluna esquerda = métodos de pagamento (radio: Beezie wallet com saldo, External wallet com saldo, Credit/Debit); coluna direita = resumo do item + quantidade + total; botão "Confirm". | Modal ancorado embaixo: tabs "Wallet" / "Credit/Debit", resumo do item, "Choose Wallet" (radio Beezie/External), botão "Confirm". |
-| **Reveal (1 item)** | Modal fullscreen: imagem grande à esquerda, nome do item + "Swap Value" (valor em destaque) + botões "Swap Now" (primário) / "Keep Item" (secundário) à direita. | Mesmo conteúdo empilhado verticalmente. |
-| **Reveal (N itens)** | Modal fullscreen com grade (4 colunas desktop / 2 colunas mobile) de cards: imagem, ícone "+" no canto (seleção), nome, botão "Swap for $X" individual. Rodapé fixo: "Expires in mm:ss", "Select all", botão "Swap" em lote. | Igual, grade 2 colunas, mesmo rodapé fixo. |
+| **Hero / Claw Page** | Header navigation (Marketplace, Claw, Leaderboard, Resources, More), balance, and avatar in the top right. Two-column grid: machine on the left and purchase panel on the right (name, description, price + points, stepper, promo code, odds table, "More Claw Machines"). Below, two columns: "Top Items" (3xN grid) and "Recent Pulls" (list). | Stacked vertically: hexagon/logo, machine image, and purchase card (name, price, promo code, odds, stepper + Start Now). |
+| **Payment** | Centered "Review & pay" modal: left column with payment methods (radio: Beezie wallet balance, External wallet balance, Credit/Debit); right column with item summary, quantity, and total; "Confirm" button. | Bottom-anchored modal: "Wallet" / "Credit/Debit" tabs, item summary, "Choose Wallet" (Beezie/External radio), and "Confirm" button. |
+| **Reveal (1 item)** | Fullscreen modal: large image on the left, item name + "Swap Value" (highlighted) + "Swap Now" (primary) / "Keep Item" (secondary) buttons on the right. | Same content stacked vertically. |
+| **Reveal (N items)** | Fullscreen modal with a card grid (4 desktop columns / 2 mobile columns): image, "+" selection icon, name, and individual "Swap for $X" button. Fixed footer: "Expires in mm:ss", "Select all", and bulk "Swap" button. | Same layout with a two-column grid and fixed footer. |
 
-Pontos de atenção que os prints deixam claros:
+Important behavior shown in the reference screenshots:
 
-- O timer de expiração ("Expires in 14 min 29 sec") é compartilhado por todos os itens revelados no mesmo pull — não é por item.
-- O botão "Swap" no rodapé provavelmente soma os itens selecionados (via "+"/checkbox ou "Select all") e faz o swap em lote; os botões "Swap for $X" individuais dentro de cada card permitem swap avulso.
-- No mobile, o resumo do pagamento some o valor total explícito na tela que você enviou — considere manter consistência com a versão desktop (mostrar total) mesmo no mobile.
+- The expiration timer ("Expires in 14 min 29 sec") is shared by every item revealed in the same pull, not one timer per item.
+- The footer "Swap" button should total the selected items (through the "+"/checkbox or "Select all") and swap them in bulk. Individual "Swap for $X" buttons allow one-off swaps.
+- On mobile, keep the explicit total in the payment summary for consistency with the desktop version.
 
 ---
 
-## 2. Modelos de dados sugeridos (TypeScript)
+## 2. Suggested data models (TypeScript)
 
 ```ts
 export type Rarity = "ultra-rare" | "rare" | "uncommon" | "common" | "base";
@@ -32,7 +32,7 @@ export interface ClawItem {
   id: string;
   name: string;
   imageUrl: string;
-  fairMarketValue: number; // usado como "Swap Value"
+  fairMarketValue: number; // used as "Swap Value"
   rarity: Rarity;
 }
 
@@ -41,19 +41,19 @@ export interface ClawMachine {
   name: string; // "Pokémon Gold Claw"
   description: string;
   heroImageUrl: string;
-  videoOpeningUrl: string; // asset local ou remoto
+  videoOpeningUrl: string; // local or remote asset
   pricePerPull: number;
   pointsPerPull: number;
   averageValue: number;
   odds: OddsTier[];
-  itemPool: ClawItem[]; // usado para sortear + para "Top Items"
+  itemPool: ClawItem[]; // used for draws and for "Top Items"
 }
 
 export interface RecentPull {
   id: string;
   item: ClawItem;
   userDisplayName: string;
-  paidValue: number; // "$100" mostrado na lista
+  paidValue: number; // "$100" shown in the list
   timestamp: string;
 }
 
@@ -64,7 +64,7 @@ export interface Wallet {
 
 export interface PullResult {
   pullId: string;
-  items: ClawItem[]; // 1 ou N
-  expiresAt: number; // epoch ms — usado no countdown
+  items: ClawItem[]; // 1 or N
+  expiresAt: number; // epoch ms - used for the countdown
 }
 ```

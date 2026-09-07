@@ -1,95 +1,93 @@
-# Contexto do Projeto — Beezie Claw (desafio técnico)
+# Project Context - Beezie Claw (technical challenge)
 
-## Negócio (para o agente entender o domínio, não é para copiar textos da Beezie)
+## Business context (for domain understanding; do not copy Beezie text)
 
-A Beezie é um marketplace de colecionáveis físicos (cards Pokémon, One Piece, sneakers,
-memorabilia) que guarda os itens custodiados fisicamente e permite compra, venda e troca
-digital desses ativos. A feature principal deste desafio é o "Claw" (máquina de garra):
+Beezie is a marketplace for physical collectibles (Pokémon and One Piece cards, sneakers,
+and memorabilia) that physically custodies the items and enables digital purchase, sale,
+and exchange of those assets. The main feature in this challenge is the "Claw" machine:
 
-- O usuário paga um valor fixo por "pull" (ex: $30 a $500) para ter a chance de ganhar um
-  item físico de valor variável.
-- Cada máquina tem probabilidades (odds) visíveis por faixa de raridade: Ultra-Rare, Rare,
-  Uncommon, Common, Base — cada faixa com % de chance e faixa de valor em dólar.
-- Após o pull, o item é revelado. O usuário pode:
-  - **Keep Item**: manter o item (vai para a "coleção"/vault do usuário).
-  - **Swap Now**: trocar o item por valor em créditos/saldo (fair market value),
-    dentro de uma janela de tempo limitada (contagem regressiva visível na tela).
-- Quando a quantidade (QTY) do pull é maior que 1, a revelação mostra todos os itens
-  ganhos em grade, com opção de selecionar individualmente ou "Select all" e fazer swap
-  em lote antes do timer expirar.
-- Pagamento pode ser feito via saldo interno ("Beezie wallet"), carteira externa ou
-  cartão de crédito/débito.
+- The user pays a fixed amount per "pull" (for example, $30 to $500) for a chance to win a
+  physical item with a variable value.
+- Each machine exposes odds by rarity tier: Ultra-Rare, Rare, Uncommon, Common, and Base,
+  with a percentage chance and dollar value range for each tier.
+- After the pull, the item is revealed. The user can:
+  - **Keep Item**: keep the item in the user's collection or vault.
+  - **Swap Now**: exchange the item for credits based on its fair market value within a
+    limited time window shown by a countdown.
+- When pull quantity (QTY) is greater than 1, the reveal shows all items in a grid. Users
+  can select items individually or choose "Select all" to swap them in bulk before the
+  timer expires.
+- Payment can use the internal "Beezie wallet", an external wallet, or a credit/debit card.
 
-Este é o mesmo padrão de "gacha"/loot box usado em mobile games: pagar → animação de
-abertura → revelação → decisão de manter ou converter em moeda.
+This follows the same "gacha"/loot box pattern used in mobile games: pay -> opening
+animation -> reveal -> decision to keep or convert to currency.
 
 ## Stack
 
-- React Native + Expo (Expo Router para navegação)
-- Deve rodar de forma responsiva em iOS, Android e Web (via react-native-web, já
-  incluso no Expo)
+- React Native + Expo (Expo Router for navigation)
+- Must run responsively on iOS, Android, and Web (via react-native-web, already included
+  with Expo)
 - TypeScript
-- Gerenciamento de estado: [DEFINIR — ex: Zustand] para carrinho/qty, wallet, sessão de reveal
-- Dados mockados localmente (sem backend real) simulando uma API assíncrona
-  (usar Promises com delay artificial para simular latência de rede)
-- Vídeos de abertura da caixa/garra: `expo-video` (ou `expo-av`, dependendo da versão
-  do Expo SDK do template), assets em `/assets/videos/`
+- State management: [DEFINE - for example, Zustand] for cart/quantity, wallet, and reveal session
+- Local mock data (no real backend) simulating an asynchronous API with Promises and an
+  artificial delay to simulate network latency
+- Claw/box opening videos: `expo-video` (or `expo-av`, depending on the template's Expo
+  SDK version), with assets in `/assets/videos/`
 
-## Convenções
+## Conventions
 
-- Todo texto visível ao usuário em português (ajustar se o desafio pedir inglês)
-- Cores/tema: seguir o dark theme visto nos prints (fundo quase preto, destaque em
-  amarelo/dourado #F5C518-ish, texto branco/cinza)
-- Nomear componentes por tela: `ClawHeroScreen`, `PaymentModal`, `RevealSingleModal`,
+- Keep all user-visible text in English.
+- Colors/theme: follow the dark theme shown in the reference screenshots (near-black
+  background, yellow/gold #F5C518-ish accent, white/gray text).
+- Name components by screen: `ClawHeroScreen`, `PaymentModal`, `RevealSingleModal`,
   `RevealMultipleModal`
 - Breakpoint responsivo sugerido: `< 768px` = layout mobile (stack vertical),
   `>= 768px` = layout desktop (duas colunas)
 
-## Fluxo de referência (ordem de telas)
+## Reference flow (screen order)
 
-1. Hero screen: metade superior = visual da máquina de garra + nome do prêmio +
-   preço + stepper de quantidade + botão "Start Now"; metade inferior (mesmo viewport,
-   sem exigir scroll pra ver algo) = "Top Items" e "Recent Pulls"
-2. Usuário ajusta QTY e toca "Start Now" → abre modal de pagamento
-3. Modal de pagamento: overlay modal, usuário escolhe método de pagamento
-   (Beezie wallet / carteira externa / cartão) e confirma. Resumo mostra item,
-   preço unitário, pontos ganhos, quantidade e total.
-4. Após confirmar pagamento, roda animação de vídeo (abertura da garra/caixa)
-   5a. Se QTY = 1: modal fullscreen de revelação com 1 item — imagem, nome, "Swap Value",
-   botões "Swap Now" e "Keep Item"
-   5b. Se QTY > 1: modal fullscreen de revelação em grade com N itens — cada card com
-   imagem, nome, botão individual "Swap for $X", checkbox/seleção (ícone "+"),
-   rodapé fixo com contagem regressiva ("Expires in mm:ss"), "Select all" e botão
-   "Swap" em lote
+1. Hero screen: the top half shows the claw machine visual, prize name, price, quantity
+   stepper, and "Start Now" button; the bottom half of the same viewport shows "Top Items"
+   and "Recent Pulls" without requiring a scroll.
+2. The user adjusts QTY and taps "Start Now" to open the payment modal.
+3. In the payment modal, the user chooses a payment method (Beezie wallet, external
+   wallet, or card) and confirms. The summary shows the item, unit price, points earned,
+   quantity, and total.
+4. After payment confirmation, the claw/box opening video plays.
+   5a. If QTY = 1: a fullscreen reveal modal shows one item, its image and name, "Swap Value",
+   and the "Swap Now" and "Keep Item" buttons.
+   5b. If QTY > 1: a fullscreen grid reveal modal shows N items. Each card has an image,
+   name, individual "Swap for $X" button, and selection control. A fixed footer shows the
+   countdown ("Expires in mm:ss"), "Select all", and a bulk "Swap" button.
 
-## Dados mockados necessários
+## Required mock data
 
-- Lista de "claw machines" (id, nome, imagem, preço, pontos, odds por raridade,
-  valor médio, lista de itens possíveis no pool)
-- Lista de "Top Items" (itens de maior valor da máquina)
-- Lista de "Recent Pulls" (feed de pulls recentes de outros usuários — item, nome
-  do usuário/apelido, valor)
-- Saldo da wallet do usuário (Beezie wallet, carteira externa)
-- Resultado de um "pull" (1 ou N itens sorteados conforme odds, com valor de swap)
+- List of "claw machines" (id, name, image, price, points, rarity odds, average value,
+  and possible items in the pool)
+- List of "Top Items" (the machine's highest-value items)
+- List of "Recent Pulls" (a feed of recent pulls from other users with item, display name,
+  and value)
+- User wallet balances (Beezie wallet and external wallet)
+- A "pull" result (1 or N items drawn according to the odds, with swap values)
 
-## 2. Especificação funcional detalhada (extraída dos seus prints, para você conferir antes de rodar os prompts)
+## 2. Detailed functional specification (based on the reference screenshots)
 
-| Tela                 | Desktop                                                                                                                                                                                                                                                                                                                              | Mobile                                                                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Hero / Claw Page** | Header com nav (Marketplace, Claw, Leaderboard, Resources, More), saldo e avatar no topo direito. Grade 2 colunas: máquina à esquerda, painel de compra à direita (nome, descrição, preço + pontos, stepper, promo code, tabela de odds, "More Claw Machines"). Abaixo, 2 colunas: "Top Items" (grade 3xN) e "Recent Pulls" (lista). | Empilhado verticalmente: hexágono/logo, imagem da máquina, card de compra (nome, preço, promo code, odds, stepper + Start Now).   |
-| **Payment**          | Modal centralizado "Review & pay": coluna esquerda = métodos de pagamento (radio: Beezie wallet com saldo, External wallet com saldo, Credit/Debit); coluna direita = resumo do item + quantidade + total; botão "Confirm".                                                                                                          | Modal ancorado embaixo: tabs "Wallet" / "Credit/Debit", resumo do item, "Choose Wallet" (radio Beezie/External), botão "Confirm". |
-| **Reveal (1 item)**  | Modal fullscreen: imagem grande à esquerda, nome do item + "Swap Value" (valor em destaque) + botões "Swap Now" (primário) / "Keep Item" (secundário) à direita.                                                                                                                                                                     | Mesmo conteúdo empilhado verticalmente.                                                                                           |
-| **Reveal (N itens)** | Modal fullscreen com grade (4 colunas desktop / 2 colunas mobile) de cards: imagem, ícone "+" no canto (seleção), nome, botão "Swap for $X" individual. Rodapé fixo: "Expires in mm:ss", "Select all", botão "Swap" em lote.                                                                                                         | Igual, grade 2 colunas, mesmo rodapé fixo.                                                                                        |
+| Screen               | Desktop                                                                                                                                                                                                                                                                                                                                           | Mobile                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Hero / Claw Page** | Header navigation (Marketplace, Claw, Leaderboard, Resources, More), balance, and avatar in the top right. Two-column grid: machine on the left and purchase panel on the right (name, description, price + points, stepper, promo code, odds table, "More Claw Machines"). Below, two columns: "Top Items" (3xN grid) and "Recent Pulls" (list). | Stacked vertically: hexagon/logo, machine image, and purchase card (name, price, promo code, odds, stepper + Start Now).            |
+| **Payment**          | Centered "Review & pay" modal: left column with payment methods (radio: Beezie wallet balance, External wallet balance, Credit/Debit); right column with item summary, quantity, and total; "Confirm" button.                                                                                                                                     | Bottom-anchored modal: "Wallet" / "Credit/Debit" tabs, item summary, "Choose Wallet" (Beezie/External radio), and "Confirm" button. |
+| **Reveal (1 item)**  | Fullscreen modal: large image on the left, item name + "Swap Value" (highlighted) + "Swap Now" (primary) / "Keep Item" (secondary) buttons on the right.                                                                                                                                                                                          | Same content stacked vertically.                                                                                                    |
+| **Reveal (N items)** | Fullscreen modal with a card grid (4 desktop columns / 2 mobile columns): image, "+" selection icon, name, and individual "Swap for $X" button. Fixed footer: "Expires in mm:ss", "Select all", and bulk "Swap" button.                                                                                                                           | Same layout with a two-column grid and fixed footer.                                                                                |
 
-Pontos de atenção que os prints deixam claros:
+Important behavior shown in the reference screenshots:
 
-- O timer de expiração ("Expires in 14 min 29 sec") é compartilhado por todos os itens revelados no mesmo pull — não é por item.
-- O botão "Swap" no rodapé provavelmente soma os itens selecionados (via "+"/checkbox ou "Select all") e faz o swap em lote; os botões "Swap for $X" individuais dentro de cada card permitem swap avulso.
-- No mobile, o resumo do pagamento some o valor total explícito na tela que você enviou — considere manter consistência com a versão desktop (mostrar total) mesmo no mobile.
+- The expiration timer ("Expires in 14 min 29 sec") is shared by every item revealed in the same pull, not one timer per item.
+- The footer "Swap" button should total the selected items (through the "+"/checkbox or "Select all") and swap them in bulk. Individual "Swap for $X" buttons allow one-off swaps.
+- On mobile, keep the explicit total in the payment summary for consistency with the desktop version.
 
 ---
 
-## 3. Modelos de dados sugeridos (TypeScript)
+## 3. Suggested data models (TypeScript)
 
 ```ts
 export type Rarity = "ultra-rare" | "rare" | "uncommon" | "common" | "base";
@@ -106,7 +104,7 @@ export interface ClawItem {
   id: string;
   name: string;
   imageUrl: string;
-  fairMarketValue: number; // usado como "Swap Value"
+  fairMarketValue: number; // used as "Swap Value"
   rarity: Rarity;
 }
 
@@ -115,19 +113,19 @@ export interface ClawMachine {
   name: string; // "Pokémon Gold Claw"
   description: string;
   heroImageUrl: string;
-  videoOpeningUrl: string; // asset local ou remoto
+  videoOpeningUrl: string; // local or remote asset
   pricePerPull: number;
   pointsPerPull: number;
   averageValue: number;
   odds: OddsTier[];
-  itemPool: ClawItem[]; // usado para sortear + para "Top Items"
+  itemPool: ClawItem[]; // used for draws and for "Top Items"
 }
 
 export interface RecentPull {
   id: string;
   item: ClawItem;
   userDisplayName: string;
-  paidValue: number; // "$100" mostrado na lista
+  paidValue: number; // "$100" shown in the list
   timestamp: string;
 }
 
@@ -138,7 +136,7 @@ export interface Wallet {
 
 export interface PullResult {
   pullId: string;
-  items: ClawItem[]; // 1 ou N
-  expiresAt: number; // epoch ms — usado no countdown
+  items: ClawItem[]; // 1 or N
+  expiresAt: number; // epoch ms - used for the countdown
 }
 ```

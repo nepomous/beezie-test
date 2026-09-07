@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import { useWallet } from "../context/WalletContext";
 import { purchasePull } from "../services/clawService";
 import { colors } from "../theme/colors";
 import type { PullResult } from "../types/claw";
@@ -37,20 +38,27 @@ export function PaymentModalPlaceholder({
   quantity,
   totalPrice,
 }: PaymentModalPlaceholderProps) {
+  const { canAfford, deduct } = useWallet();
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
+    if (!canAfford(totalPrice)) {
+      setError("Insufficient balance. Please top up your Beezie wallet.");
+      return;
+    }
+
     setIsPurchasing(true);
     setError(null);
     try {
       const result = await purchasePull(machineId, quantity, "beezie-wallet");
+      deduct(totalPrice);
       onConfirm(result);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Não foi possível concluir o pagamento. Tente novamente.",
+          : "Unable to complete the payment. Please try again.",
       );
     } finally {
       setIsPurchasing(false);
