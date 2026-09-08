@@ -19,6 +19,7 @@ import { colors } from "../theme/colors";
 import { shape } from "../theme/shape";
 import type { ClawItem } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
+import { simulateDelay } from "../utils/simulateDelay";
 import { ItemCard } from "./ItemCard";
 import { SwapSuccessModal } from "./SwapSuccessModal";
 
@@ -42,11 +43,6 @@ interface SuccessState {
 /** Rolls the randomized swap duration (ms), mirroring `randomDelay` in clawService.ts. */
 function rollSwapDuration(): number {
   return 2000 + Math.random() * 2000;
-}
-
-/** Simulates network latency for a swap over an already-rolled duration. */
-function simulateSwapDelay(durationMs: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
 function formatCountdown(expiresAt: number | null, now: number): string {
@@ -241,7 +237,7 @@ export function RevealMultipleModal({
     const duration = rollSwapDuration();
     setSwappingIds((current) => new Set(current).add(item.id));
     setSwappingDurations((current) => new Map(current).set(item.id, duration));
-    await simulateSwapDelay(duration);
+    await simulateDelay(duration, duration);
 
     credit(item.fairMarketValue);
 
@@ -285,7 +281,7 @@ export function RevealMultipleModal({
     setSwappingDurations(
       new Map(Array.from(idsToSwap, (id) => [id, duration])),
     );
-    await simulateSwapDelay(duration);
+    await simulateDelay(duration, duration);
 
     const total = itemsToSwap.reduce(
       (sum, item) => sum + item.fairMarketValue,

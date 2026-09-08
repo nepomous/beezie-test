@@ -1,12 +1,26 @@
-import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import mockReward from "../assets/mock_reward.png";
+import { calculateSwapPoints } from "../config/points";
 import { useWallet } from "../context/WalletContext";
+import { useVault } from "../contexts/VaultContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { colors } from "../theme/colors";
+import { itemFrame } from "../theme/itemFrame";
 import { shape } from "../theme/shape";
 import type { ClawItem } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
+import { simulateDelay } from "../utils/simulateDelay";
+import { SwapSuccessModal } from "./SwapSuccessModal";
 
 interface RevealSingleModalProps {
   visible: boolean;
@@ -16,6 +30,11 @@ interface RevealSingleModalProps {
   itemIndex?: number;
   /** Total number of items in the pull; the "Item X of N" label only shows when > 1. */
   itemCount?: number;
+}
+
+interface SuccessState {
+  amount: number;
+  points: number;
 }
 
 /**
@@ -33,98 +52,155 @@ export function RevealSingleModal({
 }: RevealSingleModalProps) {
   const { isMobile } = useResponsive();
   const { credit } = useWallet();
+  const vault = useVault();
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [successResult, setSuccessResult] = useState<SuccessState | null>(null);
 
   if (!item) return null;
 
   const handleKeepItem = () => {
-    // TODO: call real API to add `item` to the user's collection/vault.
-    console.log("Keep item:", item.id);
+    vault.addKept([item]);
     onClose();
   };
 
-  const handleSwapNow = () => {
-    // TODO: call real API to persist the swap once a backend exists.
+  // Closing before any decision (swap/keep) implicitly keeps the item so it's
+  // never silently lost; a swap already in flight is left alone instead.
+  const handleClose = () => {
+    if (isSwapping) return;
+    handleKeepItem();
+  };
+
+  const handleSwapNow = async () => {
+    setIsSwapping(true);
+    await simulateDelay(2000, 4000);
+
     credit(item.fairMarketValue);
+    setIsSwapping(false);
+    setSuccessResult({
+      amount: item.fairMarketValue,
+      points: calculateSwapPoints(item.fairMarketValue),
+    });
+  };
+
+  const handleSuccessDismiss = () => {
+    setSuccessResult(null);
     onClose();
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={false}
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <View style={styles.screen}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.closeButton,
-            pressed && styles.pressedOpacity,
-          ]}
-          onPress={onClose}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Text style={styles.closeButtonText}>✕</Text>
-        </Pressable>
-
-        <View style={[styles.content, !isMobile && styles.contentDesktop]}>
-          <View
-            style={[styles.imageColumn, !isMobile && styles.imageColumnDesktop]}
-          >
-            <Image
-              source={mockReward}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          </View>
-
-          <View
-            style={[
-              styles.detailsColumn,
-              !isMobile && styles.detailsColumnDesktop,
+    <>
+      <Modal
+        visible={visible}
+        transparent={false}
+        animationType="fade"
+        onRequestClose={handleClose}
+        statusBarTranslucent
+        navigationBarTranslucent
+      >
+        <View style={styles.screen}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.pressedOpacity,
             ]}
+            onPress={handleClose}
+            disabled={isSwapping}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
           >
-            {itemCount !== undefined &&
-              itemCount > 1 &&
-              itemIndex !== undefined && (
-                <Text style={styles.itemProgress}>
-                  Item {itemIndex + 1} of {itemCount}
-                </Text>
-              )}
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.swapLabel}>Swap Value</Text>
-            <Text style={styles.swapValue}>
-              {formatCurrency(item.fairMarketValue)}
-            </Text>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </Pressable>
 
-            <View style={styles.actions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.swapButton,
-                  pressed && styles.pressedOpacity,
-                ]}
-                onPress={handleSwapNow}
-              >
-                <Text style={styles.swapButtonText}>Swap Now</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.keepButton,
-                  pressed && styles.pressedOpacity,
-                ]}
-                onPress={handleKeepItem}
-              >
-                <Text style={styles.keepButtonText}>Keep Item</Text>
-              </Pressable>
+          <View style={[styles.content, !isMobile && styles.contentDesktop]}>
+            <View
+              style={[
+                styles.imageColumn,
+                !isMobile && styles.imageColumnDesktop,
+              ]}
+            >
+              <View style={[itemFrame.itemFrameOuter, styles.imageFrame]}>
+                <View
+                  style={[itemFrame.itemFrameInner, styles.imageFrameInner]}
+                >
+                  <Image
+                    source={item.imageUrl ? { uri: item.imageUrl } : mockReward}
+                    style={styles.image}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.detailsColumn,
+                !isMobile && styles.detailsColumnDesktop,
+              ]}
+            >
+              {itemCount !== undefined &&
+                itemCount > 1 &&
+                itemIndex !== undefined && (
+                  <Text style={styles.itemProgress}>
+                    Item {itemIndex + 1} of {itemCount}
+                  </Text>
+                )}
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.swapLabel}>Swap Value</Text>
+              <Text style={styles.swapValue}>
+                {formatCurrency(item.fairMarketValue)}
+              </Text>
+
+              <View style={styles.actions}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.swapButton,
+                    isSwapping && styles.swapButtonDisabled,
+                    pressed && styles.pressedOpacity,
+                  ]}
+                  onPress={handleSwapNow}
+                  disabled={isSwapping}
+                  testID="swap-now-button"
+                >
+                  {isSwapping ? (
+                    <View style={styles.swappingRow}>
+                      <ActivityIndicator
+                        color={colors.background}
+                        size="small"
+                      />
+                      <Text style={styles.swapButtonText}>
+                        SWAP in progress
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.swapButtonText}>Swap Now</Text>
+                  )}
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.keepButton,
+                    pressed && styles.pressedOpacity,
+                  ]}
+                  onPress={handleKeepItem}
+                  disabled={isSwapping}
+                  testID="keep-item-button"
+                >
+                  <Text style={styles.keepButtonText}>Keep Item</Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {successResult && (
+        <SwapSuccessModal
+          amount={successResult.amount}
+          points={successResult.points}
+          onClose={handleSuccessDismiss}
+        />
+      )}
+    </>
   );
 }
 
@@ -169,20 +245,23 @@ const styles = StyleSheet.create({
   imageColumnDesktop: {
     flex: 1,
   },
+  imageFrame: {
+    maxWidth: 420,
+  },
+  // Reveal frame is much larger than ItemCard's, so it needs more breathing
+  // room than the shared 30px to match the Figma reference.
+  imageFrameInner: {
+    padding: 40,
+  },
   image: {
     width: "100%",
-    maxWidth: 420,
-    aspectRatio: 0.8,
-    borderRadius: shape.itemCard,
-    backgroundColor: colors.surface,
+    height: "100%",
   },
   detailsColumn: {
     gap: 8,
-    alignItems: "center",
   },
   detailsColumnDesktop: {
     flex: 1,
-    alignItems: "flex-start",
   },
   itemProgress: {
     color: colors.textSecondary,
@@ -195,7 +274,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 22,
     fontWeight: "700",
-    textAlign: "center",
   },
   swapLabel: {
     color: colors.textSecondary,
@@ -218,6 +296,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
+  },
+  swapButtonDisabled: {
+    backgroundColor: colors.goldMuted,
+  },
+  swappingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   swapButtonText: {
     color: colors.background,

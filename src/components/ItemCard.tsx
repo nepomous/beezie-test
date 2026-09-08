@@ -14,6 +14,7 @@ import {
 
 import mockReward from "../assets/mock_reward.png";
 import { colors } from "../theme/colors";
+import { itemFrame } from "../theme/itemFrame";
 import { shape } from "../theme/shape";
 import type { ClawItem } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
@@ -125,8 +126,8 @@ export function ItemCard({
   });
 
   return (
-    <View style={[styles.cardSurface, style]}>
-      <View style={styles.imageBox}>
+    <View style={[itemFrame.itemFrameOuter, style]}>
+      <View style={itemFrame.itemFrameInner}>
         <Image
           source={item.imageUrl ? { uri: item.imageUrl } : mockReward}
           style={styles.cardImage}
@@ -218,19 +219,6 @@ export function ItemCard({
 }
 
 const styles = StyleSheet.create({
-  cardSurface: {
-    width: "100%",
-    borderRadius: shape.itemCardFrame,
-    backgroundColor: colors.cardFrame,
-    padding: 4,
-  },
-  imageBox: {
-    position: "relative",
-    aspectRatio: 1,
-    padding: 30,
-    borderRadius: shape.itemCardInner,
-    backgroundColor: colors.cardSurface,
-  },
   cardImage: {
     width: "100%",
     height: "100%",
