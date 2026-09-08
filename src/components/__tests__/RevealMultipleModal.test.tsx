@@ -1,4 +1,5 @@
 import renderer, { act } from "react-test-renderer";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { WalletProvider } from "../../context/WalletContext";
 import { useVault, VaultProvider } from "../../contexts/VaultContext";
@@ -43,17 +44,24 @@ function renderModal(
   let tree: renderer.ReactTestRenderer;
   act(() => {
     tree = renderer.create(
-      <WalletProvider>
-        <VaultProvider>
-          <VaultSpy onReady={(value) => (vault = value)} />
-          <RevealMultipleModal
-            visible
-            items={items}
-            expiresAt={expiresAt}
-            onClose={onClose}
-          />
-        </VaultProvider>
-      </WalletProvider>,
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 0, height: 0 },
+          insets: { top: 0, left: 0, right: 0, bottom: 0 },
+        }}
+      >
+        <WalletProvider>
+          <VaultProvider>
+            <VaultSpy onReady={(value) => (vault = value)} />
+            <RevealMultipleModal
+              visible
+              items={items}
+              expiresAt={expiresAt}
+              onClose={onClose}
+            />
+          </VaultProvider>
+        </WalletProvider>
+      </SafeAreaProvider>,
     );
   });
   return { tree: tree!, getVault: () => vault! };

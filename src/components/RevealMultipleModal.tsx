@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useWallet } from "../context/WalletContext";
 import { useVault } from "../contexts/VaultContext";
@@ -68,6 +69,7 @@ export function RevealMultipleModal({
   const { isMobile } = useResponsive();
   const { credit } = useWallet();
   const vault = useVault();
+  const insets = useSafeAreaInsets();
 
   const [remainingItems, setRemainingItems] = useState<ClawItem[]>(items);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
@@ -317,7 +319,7 @@ export function RevealMultipleModal({
       navigationBarTranslucent
     >
       <View style={styles.screen}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <Pressable
             style={({ pressed }) => [
               styles.closeButton,
@@ -348,7 +350,7 @@ export function RevealMultipleModal({
           ))}
         </ScrollView>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
           <Animated.Text
             style={[
               styles.expiresText,
@@ -456,7 +458,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },

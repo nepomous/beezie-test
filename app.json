@@ -8,7 +8,8 @@
     "userInterfaceStyle": "light",
     "scheme": "beezietest",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nepomous.beezietest"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,13 +18,17 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.nepomous.beezietest"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "static",
       "bundler": "metro"
     },
-    "plugins": ["expo-video", "expo-router"]
+    "plugins": [
+      "expo-video",
+      "expo-router"
+    ]
   }
 }

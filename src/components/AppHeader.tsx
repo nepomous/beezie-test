@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BeezieIcon from "../assets/icons/beezie_icon.svg";
 import BeezieLogo from "../assets/Beezie_logo.svg";
@@ -40,6 +41,7 @@ function showComingSoonAlert() {
 export function AppHeader() {
   const { isMobile } = useResponsive();
   const { balance } = useWallet();
+  const insets = useSafeAreaInsets();
   const [isMenuMounted, setIsMenuMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [translateX] = useState(() => new Animated.Value(-DRAWER_WIDTH));
@@ -83,7 +85,7 @@ export function AppHeader() {
   if (isMobile) {
     return (
       <>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.leftSection}>
             <Pressable
               onPress={openMenu}
@@ -143,7 +145,7 @@ export function AppHeader() {
   }
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <View style={styles.leftSection}>
         <BeezieLogo width={78} height={33} />
       </View>
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 64,
+    minHeight: 64,
     paddingHorizontal: 24,
     backgroundColor: colors.background,
     borderBottomWidth: StyleSheet.hairlineWidth,

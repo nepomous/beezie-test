@@ -9,6 +9,8 @@ import {
   View,
 } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import mockReward from "../assets/mock_reward.png";
 import { calculateSwapPoints } from "../config/points";
 import { useWallet } from "../context/WalletContext";
@@ -45,6 +47,7 @@ export function RevealSingleModal({
   const { isMobile } = useResponsive();
   const { credit } = useWallet();
   const vault = useVault();
+  const insets = useSafeAreaInsets();
   const [isSwapping, setIsSwapping] = useState(false);
   const [successResult, setSuccessResult] = useState<SuccessState | null>(null);
 
@@ -93,6 +96,7 @@ export function RevealSingleModal({
           <Pressable
             style={({ pressed }) => [
               styles.closeButton,
+              { top: insets.top + 24 },
               pressed && styles.pressedOpacity,
             ]}
             onPress={handleClose}
@@ -197,7 +201,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: "absolute",
-    top: 24,
     right: 24,
     zIndex: 10,
     width: 40,
