@@ -1,21 +1,61 @@
-import renderer, { act } from "react-test-renderer";
+import { act, renderRouter, screen } from "expo-router/testing-library";
 
-import App from "../App";
+// expo-router/testing-library's renderRouter wraps the tree in React
+// Navigation's container, which currently logs two known-benign warnings
+// under React 19.2.3 + fake timers: overlapping act() calls, and an
+// "Invalid prop `navigation`" Fragment warning from its internal screen
+// wrapper. This is a version-compatibility quirk between expo-router's
+// testing-library and React 19.2.3, not a real bug (the app renders
+// correctly on iOS/Android/Web), so we filter just these two known
+// messages here rather than hiding console.error project-wide.
+const KNOWN_BENIGN_CONSOLE_ERRORS = [
+  "overlapping act() calls",
+  "Invalid prop `navigation` supplied to `React.Fragment`",
+];
+
+// React logs some warnings with printf-style `%s` placeholders instead of an
+// already-interpolated string, so substitute them before substring-matching.
+function formatConsoleArgs(args: unknown[]): string {
+  const [first, ...rest] = args;
+  if (typeof first !== "string") {
+    return args.map(String).join(" ");
+  }
+  let restIndex = 0;
+  return first.replace(/%s/g, () => String(rest[restIndex++]));
+}
+
+let consoleErrorSpy: jest.SpyInstance;
+
+beforeEach(() => {
+  const originalConsoleError = console.error.bind(console);
+  consoleErrorSpy = jest
+    .spyOn(console, "error")
+    .mockImplementation((...args) => {
+      const message = formatConsoleArgs(args);
+      if (
+        KNOWN_BENIGN_CONSOLE_ERRORS.some((known) => message.includes(known))
+      ) {
+        return;
+      }
+      originalConsoleError(...args);
+    });
+});
+
+afterEach(() => {
+  consoleErrorSpy.mockRestore();
+});
 
 it("renders the home screen without crashing", async () => {
   jest.useFakeTimers();
 
-  let tree: renderer.ReactTestRenderer;
-  await act(async () => {
-    tree = renderer.create(<App />);
-  });
+  renderRouter("../app", { initialUrl: "/" });
   // Deterministically flush the mocked async services (setTimeout-based) so
   // their state updates resolve before the test ends.
   await act(async () => {
     await jest.advanceTimersByTimeAsync(1000);
   });
 
-  expect(tree!.toJSON()).toBeTruthy();
+  expect(screen.toJSON()).toBeTruthy();
 
   jest.useRealTimers();
 });
