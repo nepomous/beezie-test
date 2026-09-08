@@ -49,6 +49,10 @@ on all three platforms.
 
 - Place shared UI in `src/components/`, hooks in `src/hooks/`, and design
   tokens (colors, spacing, breakpoints) in `src/theme/`.
+- The project's standard accent yellow is `#FFCA28`, stored as
+  `colors.gold` (`src/theme/colors.ts`). Always reference `colors.gold`
+  instead of hardcoding a yellow hex value, and don't introduce a
+  different yellow shade without updating this token.
 - Use function components with hooks; avoid class components.
 - Co-locate tests next to the code they test in a `__tests__` folder, or in
   the repository-root `__tests__` folder for top-level app tests.

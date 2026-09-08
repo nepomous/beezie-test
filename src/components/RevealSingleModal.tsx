@@ -4,6 +4,7 @@ import mockReward from "../assets/mock_reward.png";
 import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { colors } from "../theme/colors";
+import { shape } from "../theme/shape";
 import type { ClawItem } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 
@@ -58,7 +59,10 @@ export function RevealSingleModal({
     >
       <View style={styles.screen}>
         <Pressable
-          style={styles.closeButton}
+          style={({ pressed }) => [
+            styles.closeButton,
+            pressed && styles.pressedOpacity,
+          ]}
           onPress={onClose}
           hitSlop={12}
           accessibilityRole="button"
@@ -98,10 +102,22 @@ export function RevealSingleModal({
             </Text>
 
             <View style={styles.actions}>
-              <Pressable style={styles.swapButton} onPress={handleSwapNow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.swapButton,
+                  pressed && styles.pressedOpacity,
+                ]}
+                onPress={handleSwapNow}
+              >
                 <Text style={styles.swapButtonText}>Swap Now</Text>
               </Pressable>
-              <Pressable style={styles.keepButton} onPress={handleKeepItem}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.keepButton,
+                  pressed && styles.pressedOpacity,
+                ]}
+                onPress={handleKeepItem}
+              >
                 <Text style={styles.keepButtonText}>Keep Item</Text>
               </Pressable>
             </View>
@@ -125,7 +141,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: shape.circle,
     backgroundColor: colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
@@ -157,7 +173,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     aspectRatio: 0.8,
-    borderRadius: 16,
+    borderRadius: shape.itemCard,
     backgroundColor: colors.surface,
   },
   detailsColumn: {
@@ -198,7 +214,7 @@ const styles = StyleSheet.create({
   },
   swapButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
@@ -210,7 +226,7 @@ const styles = StyleSheet.create({
   },
   keepButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
     borderColor: colors.border,
@@ -221,5 +237,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: "700",
+  },
+  pressedOpacity: {
+    opacity: 0.85,
   },
 });

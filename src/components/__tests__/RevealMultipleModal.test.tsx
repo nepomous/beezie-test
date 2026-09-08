@@ -4,6 +4,7 @@ import { WalletProvider } from "../../context/WalletContext";
 import { useVault, VaultProvider } from "../../contexts/VaultContext";
 import type { ClawItem } from "../../types/claw";
 import { calculateSwapPoints } from "../../config/points";
+import { ItemCard } from "../ItemCard";
 import { RevealMultipleModal } from "../RevealMultipleModal";
 
 const items: ClawItem[] = [
@@ -146,5 +147,45 @@ describe("RevealMultipleModal", () => {
 
     const imageA = tree.root.findByProps({ testID: "card-image-item-a" });
     expect(imageA.props.source).toEqual({ uri: items[0].imageUrl });
+  });
+
+  it("passes a swapDurationMs to a single swapping card and clears it once resolved", async () => {
+    const { tree } = renderModal();
+
+    act(() => {
+      tree.root.findByProps({ testID: "swap-button-item-a" }).props.onPress();
+    });
+
+    const cardA = tree.root
+      .findAllByType(ItemCard)
+      .find((instance) => instance.props.item.id === "item-a")!;
+    expect(typeof cardA.props.swapDurationMs).toBe("number");
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(4000);
+    });
+
+    expect(
+      tree.root.findAllByProps({ testID: "swap-button-item-a" }).length,
+    ).toBe(0);
+  });
+
+  it("passes the same rolled swapDurationMs to every card in a batch swap", () => {
+    const { tree } = renderModal();
+
+    act(() => {
+      tree.root.findByProps({ testID: "footer-swap-button" }).props.onPress();
+    });
+
+    const cards = tree.root.findAllByType(ItemCard);
+    const durationA = cards.find(
+      (instance) => instance.props.item.id === "item-a",
+    )!.props.swapDurationMs;
+    const durationB = cards.find(
+      (instance) => instance.props.item.id === "item-b",
+    )!.props.swapDurationMs;
+
+    expect(typeof durationA).toBe("number");
+    expect(durationA).toBe(durationB);
   });
 });

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
+  Animated,
+  Easing,
   Modal,
   Pressable,
   ScrollView,
@@ -10,15 +11,20 @@ import {
   View,
 } from "react-native";
 
-import mockReward from "../assets/mock_reward.png";
 import { useWallet } from "../context/WalletContext";
 import { useVault } from "../contexts/VaultContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { calculateSwapPoints } from "../config/points";
 import { colors } from "../theme/colors";
+import { shape } from "../theme/shape";
 import type { ClawItem } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
+import { ItemCard } from "./ItemCard";
 import { SwapSuccessModal } from "./SwapSuccessModal";
+
+/** Countdown pulses between normal/alert color once under this many ms remain. */
+const COUNTDOWN_CRITICAL_MS = 60_000;
+const PRESSED_OPACITY = 0.85;
 
 interface RevealMultipleModalProps {
   visible: boolean;
@@ -33,10 +39,14 @@ interface SuccessState {
   points: number;
 }
 
-/** Simulates network latency for a swap, mirroring `randomDelay` in clawService.ts. */
-function simulateSwapDelay(): Promise<void> {
-  const ms = 2000 + Math.random() * 2000;
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/** Rolls the randomized swap duration (ms), mirroring `randomDelay` in clawService.ts. */
+function rollSwapDuration(): number {
+  return 2000 + Math.random() * 2000;
+}
+
+/** Simulates network latency for a swap over an already-rolled duration. */
+function simulateSwapDelay(durationMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
 function formatCountdown(expiresAt: number | null, now: number): string {
@@ -68,6 +78,11 @@ export function RevealMultipleModal({
     () => new Set(items.map((item) => item.id)),
   );
   const [swappingIds, setSwappingIds] = useState<Set<string>>(new Set());
+  // Rolled swap duration per item id, so the progress bar animates over the
+  // exact same duration used by the `simulateSwapDelay` await.
+  const [swappingDurations, setSwappingDurations] = useState<
+    Map<string, number>
+  >(new Map());
   const [successResult, setSuccessResult] = useState<SuccessState | null>(null);
   // Whether dismissing the success modal should also close the whole reveal —
   // true after a batch swap (the pull is fully resolved), false after an
@@ -80,12 +95,15 @@ export function RevealMultipleModal({
   const [resetForItems, setResetForItems] = useState(items);
   // Guards the auto-expire effect below so it only fires once per pull.
   const hasAutoExpiredRef = useRef(false);
+  const [countdownPulse] = useState(() => new Animated.Value(0));
+  const [footerSwapProgress] = useState(() => new Animated.Value(0));
 
   if (items !== resetForItems) {
     setResetForItems(items);
     setRemainingItems(items);
     setSelectedIds(new Set(items.map((item) => item.id)));
     setSwappingIds(new Set());
+    setSwappingDurations(new Map());
     setSuccessResult(null);
     setCloseOnSuccessDismiss(false);
   }
@@ -116,6 +134,69 @@ export function RevealMultipleModal({
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [expiresAt]);
+
+  const remainingMs = expiresAt ? expiresAt - now : null;
+  const isCountdownCritical =
+    remainingMs !== null &&
+    remainingMs > 0 &&
+    remainingMs < COUNTDOWN_CRITICAL_MS &&
+    !successResult;
+
+  useEffect(() => {
+    if (!isCountdownCritical) {
+      countdownPulse.setValue(0);
+      return undefined;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(countdownPulse, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.timing(countdownPulse, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isCountdownCritical, countdownPulse]);
+
+  const countdownTextColor = countdownPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.textSecondary, colors.danger],
+  });
+
+  const isFooterSwapping = swappingIds.size > 0;
+  // Any in-flight swap (single or batch) shares the same rolled duration
+  // when it's a batch, so the first entry works for either case.
+  const footerSwapDurationMs =
+    swappingDurations.size > 0
+      ? swappingDurations.values().next().value
+      : undefined;
+
+  useEffect(() => {
+    if (!isFooterSwapping || !footerSwapDurationMs) {
+      footerSwapProgress.setValue(0);
+      return undefined;
+    }
+    const animation = Animated.timing(footerSwapProgress, {
+      toValue: 1,
+      duration: footerSwapDurationMs,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [isFooterSwapping, footerSwapDurationMs, footerSwapProgress]);
+
+  const footerSwapProgressWidth = footerSwapProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
 
   useEffect(() => {
     // Don't auto-expire on top of a success modal that's already showing,
@@ -157,8 +238,10 @@ export function RevealMultipleModal({
   };
 
   const handleSwapSingle = async (item: ClawItem) => {
+    const duration = rollSwapDuration();
     setSwappingIds((current) => new Set(current).add(item.id));
-    await simulateSwapDelay();
+    setSwappingDurations((current) => new Map(current).set(item.id, duration));
+    await simulateSwapDelay(duration);
 
     credit(item.fairMarketValue);
 
@@ -173,6 +256,11 @@ export function RevealMultipleModal({
     });
     setSwappingIds((current) => {
       const next = new Set(current);
+      next.delete(item.id);
+      return next;
+    });
+    setSwappingDurations((current) => {
+      const next = new Map(current);
       next.delete(item.id);
       return next;
     });
@@ -192,8 +280,12 @@ export function RevealMultipleModal({
       (item) => !idsToSwap.has(item.id),
     );
 
+    const duration = rollSwapDuration();
     setSwappingIds(idsToSwap);
-    await simulateSwapDelay();
+    setSwappingDurations(
+      new Map(Array.from(idsToSwap, (id) => [id, duration])),
+    );
+    await simulateSwapDelay(duration);
 
     const total = itemsToSwap.reduce(
       (sum, item) => sum + item.fairMarketValue,
@@ -205,6 +297,7 @@ export function RevealMultipleModal({
     setRemainingItems([]);
     setSelectedIds(new Set());
     setSwappingIds(new Set());
+    setSwappingDurations(new Map());
     setCloseOnSuccessDismiss(true);
     setSuccessResult({ amount: total, points: calculateSwapPoints(total) });
   };
@@ -216,7 +309,7 @@ export function RevealMultipleModal({
     }
   };
 
-  const isBulkActionDisabled = selectedIds.size === 0 || swappingIds.size > 0;
+  const isBulkActionDisabled = selectedIds.size === 0 || isFooterSwapping;
 
   return (
     <Modal
@@ -229,9 +322,11 @@ export function RevealMultipleModal({
     >
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Claw - Full screen reveal</Text>
           <Pressable
-            style={styles.closeButton}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.pressedOpacity,
+            ]}
             onPress={resolveAndClose}
             hitSlop={12}
             testID="close-button"
@@ -243,90 +338,33 @@ export function RevealMultipleModal({
         </View>
 
         <ScrollView contentContainerStyle={styles.grid}>
-          {remainingItems.map((item) => {
-            const isSelected = selectedIds.has(item.id);
-            const isSwapping = swappingIds.has(item.id);
-
-            return (
-              <View
-                key={item.id}
-                style={[styles.card, { width: isMobile ? "48%" : "23%" }]}
-              >
-                <View style={styles.imageWrapper}>
-                  <Image
-                    source={item.imageUrl ? { uri: item.imageUrl } : mockReward}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                    testID={`card-image-${item.id}`}
-                  />
-                  <Pressable
-                    style={[
-                      styles.selectBadge,
-                      isSelected && styles.selectBadgeSelected,
-                    ]}
-                    onPress={() => toggleSelected(item.id)}
-                    disabled={isSwapping}
-                    hitSlop={8}
-                    testID={`select-badge-${item.id}`}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      isSelected
-                        ? `Deselect ${item.name}`
-                        : `Select ${item.name}`
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.selectBadgeText,
-                        isSelected && styles.selectBadgeTextSelected,
-                      ]}
-                    >
-                      {isSelected ? "✓" : "+"}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                <Text style={styles.cardName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-
-                <Pressable
-                  style={[
-                    styles.swapButton,
-                    isSwapping && styles.swapButtonDisabled,
-                  ]}
-                  onPress={() => handleSwapSingle(item)}
-                  disabled={isSwapping}
-                  testID={`swap-button-${item.id}`}
-                >
-                  {isSwapping ? (
-                    <View style={styles.swappingRow}>
-                      <ActivityIndicator
-                        color={colors.background}
-                        size="small"
-                      />
-                      <Text style={styles.swapButtonText}>
-                        SWAP in progress
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.swapButtonText}>
-                      {`Swap for ${formatCurrency(item.fairMarketValue)}`}
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-            );
-          })}
+          {remainingItems.map((item) => (
+            <View key={item.id} style={{ width: isMobile ? "48%" : "23%" }}>
+              <ItemCard
+                item={item}
+                selected={selectedIds.has(item.id)}
+                onToggleSelect={() => toggleSelected(item.id)}
+                swapping={swappingIds.has(item.id)}
+                swapDurationMs={swappingDurations.get(item.id)}
+                onSwap={() => handleSwapSingle(item)}
+              />
+            </View>
+          ))}
         </ScrollView>
 
         <View style={styles.footer}>
-          <Text style={styles.expiresText}>
+          <Animated.Text
+            style={[
+              styles.expiresText,
+              isCountdownCritical && { color: countdownTextColor },
+            ]}
+          >
             {formatCountdown(expiresAt, now)}
-          </Text>
+          </Animated.Text>
 
           <View style={styles.footerActions}>
             <Pressable
+              style={({ pressed }) => pressed && styles.pressedOpacity}
               onPress={handleToggleAll}
               disabled={swappingIds.size > 0}
               testID="footer-select-all"
@@ -338,19 +376,38 @@ export function RevealMultipleModal({
             </Pressable>
 
             <Pressable
-              style={[
+              style={({ pressed }) => [
                 styles.bulkSwapButton,
                 isBulkActionDisabled && styles.bulkSwapButtonDisabled,
+                pressed && styles.pressedOpacity,
               ]}
               onPress={handleSwapSelected}
               disabled={isBulkActionDisabled}
               testID="footer-swap-button"
             >
-              <Text style={styles.bulkSwapButtonText}>
-                {selectedIds.size > 0
-                  ? `Swap ${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""} for ${formatCurrency(selectedTotal)}`
-                  : "Swap"}
-              </Text>
+              {isFooterSwapping && typeof footerSwapDurationMs === "number" && (
+                <Animated.View
+                  testID="footer-swap-progress"
+                  style={[
+                    styles.bulkSwapButtonProgress,
+                    { width: footerSwapProgressWidth },
+                  ]}
+                />
+              )}
+              {isFooterSwapping ? (
+                <View style={styles.footerSwappingRow}>
+                  <ActivityIndicator color={colors.background} size="small" />
+                  <Text style={styles.bulkSwapButtonText}>
+                    SWAP in progress
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.bulkSwapButtonText}>
+                  {selectedIds.size > 0
+                    ? `Swap ${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""} for ${formatCurrency(selectedTotal)}`
+                    : "Swap"}
+                </Text>
+              )}
             </Pressable>
           </View>
         </View>
@@ -377,18 +434,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginBottom: 16,
-  },
-  headerTitle: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    fontWeight: "600",
   },
   closeButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: shape.circle,
     backgroundColor: colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
@@ -403,65 +455,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 16,
     paddingBottom: 24,
-  },
-  card: {
-    gap: 8,
-  },
-  imageWrapper: {
-    position: "relative",
-  },
-  cardImage: {
-    width: "100%",
-    aspectRatio: 0.8,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-  },
-  selectBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  selectBadgeSelected: {
-    backgroundColor: colors.gold,
-  },
-  selectBadgeText: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  selectBadgeTextSelected: {
-    color: colors.background,
-  },
-  cardName: {
-    color: colors.textPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  swapButton: {
-    height: 36,
-    borderRadius: 6,
-    backgroundColor: colors.gold,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  swapButtonDisabled: {
-    backgroundColor: colors.surfaceAlt,
-  },
-  swappingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  swapButtonText: {
-    color: colors.background,
-    fontSize: 12,
-    fontWeight: "700",
   },
   footer: {
     flexDirection: "row",
@@ -488,17 +481,35 @@ const styles = StyleSheet.create({
   bulkSwapButton: {
     height: 40,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
+  // Lighter tone as the base (shrinks as the progress fill covers it), darker
+  // tone as the growing fill below.
   bulkSwapButtonDisabled: {
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.goldDark,
+  },
+  bulkSwapButtonProgress: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    bottom: 0,
+    backgroundColor: colors.goldMuted,
+  },
+  footerSwappingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   bulkSwapButtonText: {
     color: colors.background,
     fontSize: 13,
     fontWeight: "700",
+  },
+  pressedOpacity: {
+    opacity: PRESSED_OPACITY,
   },
 });

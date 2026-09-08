@@ -15,12 +15,11 @@ import mockPackageSmall from "../assets/mock_package_small.png";
 import { MachineIdleVideo } from "../components/MachineIdleVideo";
 import { MoreClawMachines } from "../components/MoreClawMachines";
 import { OddsTable } from "../components/OddsTable";
-import { PaymentModal } from "../components/PaymentModal";
+import { PurchaseFlowModal } from "../components/PurchaseFlowModal";
 import { QuantityStepper } from "../components/QuantityStepper";
 import { RevealMultipleModal } from "../components/RevealMultipleModal";
 import { ResponsiveContainer } from "../components/ResponsiveContainer";
 import { RevealSingleModal } from "../components/RevealSingleModal";
-import { WhatYouCanPullScreen } from "../components/WhatYouCanPullScreen";
 import { useResponsive } from "../hooks/useResponsive";
 import type { ClawMachineSummary } from "../mocks/clawMachines";
 import {
@@ -240,8 +239,14 @@ export function ClawHeroScreen() {
         </ResponsiveContainer>
       </ScrollView>
 
-      <PaymentModal
-        visible={isPaymentOpen}
+      <PurchaseFlowModal
+        stage={
+          isPaymentOpen
+            ? "payment"
+            : pendingPullResult
+              ? "whatYouCanPull"
+              : null
+        }
         onClose={() => setIsPaymentOpen(false)}
         onConfirm={(result) => {
           setIsPaymentOpen(false);
@@ -252,17 +257,12 @@ export function ClawHeroScreen() {
         quantity={quantity}
         totalPrice={totalPrice}
         pointsPerPull={machine.pointsPerPull}
+        itemPool={machine.itemPool}
+        onContinue={() => {
+          setActivePullResult(pendingPullResult);
+          setPendingPullResult(null);
+        }}
       />
-
-      {pendingPullResult && (
-        <WhatYouCanPullScreen
-          itemPool={machine.itemPool}
-          onContinue={() => {
-            setActivePullResult(pendingPullResult);
-            setPendingPullResult(null);
-          }}
-        />
-      )}
 
       {activePullResult && (
         <ClawOpeningAnimation

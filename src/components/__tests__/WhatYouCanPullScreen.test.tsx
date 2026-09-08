@@ -21,7 +21,15 @@ const itemPool: ClawItem[] = [
 ];
 
 describe("WhatYouCanPullScreen", () => {
-  it("renders every item from the pool with its approx market value", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("renders one item at a time, advancing to the next every 2000ms and looping back to the first", () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(
@@ -34,24 +42,57 @@ describe("WhatYouCanPullScreen", () => {
         .children,
     ).toBe("Approx market value: $372");
     expect(
+      tree!.root.findAllByProps({ testID: "pull-item-value-item-b" }),
+    ).toHaveLength(0);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(
       tree!.root.findByProps({ testID: "pull-item-value-item-b" }).props
         .children,
     ).toBe("Approx market value: $900");
+    expect(
+      tree!.root.findAllByProps({ testID: "pull-item-value-item-a" }),
+    ).toHaveLength(0);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(
+      tree!.root.findByProps({ testID: "pull-item-value-item-a" }).props
+        .children,
+    ).toBe("Approx market value: $372");
   });
 
-  it('calls onContinue when "Do Not Refresh" is pressed', () => {
-    const onContinue = jest.fn();
+  it('"Do Not Refresh" is decorative — no onPress handler', () => {
     let tree: renderer.ReactTestRenderer;
     act(() => {
       tree = renderer.create(
+        <WhatYouCanPullScreen itemPool={itemPool} onContinue={jest.fn()} />,
+      );
+    });
+
+    const button = tree!.root.findByProps({
+      testID: "do-not-refresh-button",
+    });
+    expect(button.props.onPress).toBeUndefined();
+  });
+
+  it("calls onContinue automatically after the delay, without any user action", async () => {
+    const onContinue = jest.fn();
+    act(() => {
+      renderer.create(
         <WhatYouCanPullScreen itemPool={itemPool} onContinue={onContinue} />,
       );
     });
 
-    act(() => {
-      tree!.root
-        .findByProps({ testID: "do-not-refresh-button" })
-        .props.onPress();
+    expect(onContinue).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(10000);
     });
 
     expect(onContinue).toHaveBeenCalledTimes(1);

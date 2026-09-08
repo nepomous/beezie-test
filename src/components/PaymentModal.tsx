@@ -14,6 +14,12 @@ import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { purchasePull } from "../services/clawService";
 import { colors } from "../theme/colors";
+import {
+  MODAL_BACKDROP_COLOR,
+  MODAL_CARD_MAX_WIDTH,
+  MODAL_OVERLAY_PADDING,
+} from "../theme/modalCard";
+import { shape } from "../theme/shape";
 import type { PaymentMethod, PullResult } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 import { CreditDebitSimulationModal } from "./CreditDebitSimulationModal";
@@ -27,6 +33,13 @@ interface PaymentModalProps {
   quantity: number;
   totalPrice: number;
   pointsPerPull: number;
+  /**
+   * When true (default), wraps the content in its own backdrop + <Modal>,
+   * matching the original standalone behavior. When false, returns just the
+   * card content (no backdrop, no <Modal>) so it can be embedded in another
+   * container, e.g. `PurchaseFlowModal`.
+   */
+  renderAsModal?: boolean;
 }
 
 // Fixed placeholder balance — external wallet linking isn't implemented yet.
@@ -47,6 +60,7 @@ export function PaymentModal({
   quantity,
   totalPrice,
   pointsPerPull,
+  renderAsModal = true,
 }: PaymentModalProps) {
   const { isMobile } = useResponsive();
   const { balance, canAfford, deduct } = useWallet();
@@ -128,6 +142,179 @@ export function PaymentModal({
     isPurchasing ||
     (selectedMethod === "external-wallet" && isExternalWalletDisabled);
 
+  const cardContent = (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Review & pay</Text>
+        <Pressable
+          style={styles.closeIconButton}
+          onPress={resetAndClose}
+          disabled={isPurchasing}
+        >
+          <Text style={styles.closeIconText}>✕</Text>
+        </Pressable>
+      </View>
+
+      {isMobile ? (
+        <>
+          <View style={styles.tabsRow}>
+            <Pressable
+              style={[
+                styles.tabButton,
+                selectedMethod !== "credit-debit" && styles.tabButtonSelected,
+              ]}
+              onPress={() => {
+                if (selectedMethod === "credit-debit") {
+                  setSelectedMethod("beezie-wallet");
+                }
+              }}
+            >
+              <Text
+                style={[
+                  styles.tabButtonText,
+                  selectedMethod !== "credit-debit" &&
+                    styles.tabButtonTextSelected,
+                ]}
+              >
+                Wallet
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.tabButton,
+                selectedMethod === "credit-debit" && styles.tabButtonSelected,
+              ]}
+              onPress={() => setSelectedMethod("credit-debit")}
+            >
+              <Text
+                style={[
+                  styles.tabButtonText,
+                  selectedMethod === "credit-debit" &&
+                    styles.tabButtonTextSelected,
+                ]}
+              >
+                Credit / Debit
+              </Text>
+            </Pressable>
+          </View>
+
+          <View>
+            <Text style={styles.sectionLabel}>Summary</Text>
+            <SummaryCard
+              machineName={machineName}
+              quantity={quantity}
+              totalPrice={totalPrice}
+              totalPoints={totalPoints}
+              compact
+            />
+          </View>
+
+          {selectedMethod === "credit-debit" ? (
+            <View style={styles.coinflowPlaceholder}>
+              <Text style={styles.coinflowPlaceholderText}>
+                Coinflow widget
+              </Text>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.sectionLabel}>Choose Wallet</Text>
+              <View style={styles.walletCardsRow}>
+                <WalletOptionCard
+                  label="Beezie wallet"
+                  valueLabel={formatCurrency(balance)}
+                  selected={selectedMethod === "beezie-wallet"}
+                  onPress={() => setSelectedMethod("beezie-wallet")}
+                />
+                <WalletOptionCard
+                  label="External wallet"
+                  valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
+                  selected={selectedMethod === "external-wallet"}
+                  onPress={() => setSelectedMethod("external-wallet")}
+                  muted
+                />
+              </View>
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={styles.contentRow}>
+          <View style={styles.column}>
+            <Text style={styles.sectionLabel}>Pay with</Text>
+
+            <PaymentOption
+              label="Beezie wallet"
+              valueLabel={formatCurrency(balance)}
+              selected={selectedMethod === "beezie-wallet"}
+              onPress={() => setSelectedMethod("beezie-wallet")}
+            />
+            <PaymentOption
+              label="External wallet"
+              valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
+              selected={selectedMethod === "external-wallet"}
+              onPress={() => setSelectedMethod("external-wallet")}
+            />
+            <PaymentOption
+              label="Credit / Debit"
+              subLabel="Processing fees may apply"
+              selected={selectedMethod === "credit-debit"}
+              onPress={() => setSelectedMethod("credit-debit")}
+            />
+          </View>
+
+          <View style={styles.column}>
+            <Text style={styles.sectionLabel}>Summary</Text>
+            <SummaryCard
+              machineName={machineName}
+              quantity={quantity}
+              totalPrice={totalPrice}
+              totalPoints={totalPoints}
+            />
+          </View>
+        </View>
+      )}
+
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      <Pressable
+        style={[
+          styles.confirmButton,
+          isConfirmDisabled && styles.confirmButtonDisabled,
+        ]}
+        onPress={handleConfirm}
+        disabled={isConfirmDisabled}
+      >
+        {isPurchasing ? (
+          <ActivityIndicator color={colors.background} />
+        ) : (
+          <Text style={styles.confirmButtonText}>Confirm</Text>
+        )}
+      </Pressable>
+    </View>
+  );
+
+  const creditDebitModal = (
+    <CreditDebitSimulationModal
+      visible={isCreditDebitOpen}
+      onClose={() => {
+        setCreditDebitError(null);
+        setIsCreditDebitOpen(false);
+      }}
+      onSimulateSuccess={handleSimulateCardSuccess}
+      onSimulateError={handleSimulateCardError}
+      isProcessing={isPurchasing}
+      errorMessage={creditDebitError}
+    />
+  );
+
+  if (!renderAsModal) {
+    return (
+      <>
+        {cardContent}
+        {creditDebitModal}
+      </>
+    );
+  }
+
   return (
     <Modal
       visible={visible}
@@ -137,169 +324,8 @@ export function PaymentModal({
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Review & pay</Text>
-            <Pressable
-              style={styles.closeIconButton}
-              onPress={resetAndClose}
-              disabled={isPurchasing}
-            >
-              <Text style={styles.closeIconText}>✕</Text>
-            </Pressable>
-          </View>
-
-          {isMobile ? (
-            <>
-              <View style={styles.tabsRow}>
-                <Pressable
-                  style={[
-                    styles.tabButton,
-                    selectedMethod !== "credit-debit" &&
-                      styles.tabButtonSelected,
-                  ]}
-                  onPress={() => {
-                    if (selectedMethod === "credit-debit") {
-                      setSelectedMethod("beezie-wallet");
-                    }
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.tabButtonText,
-                      selectedMethod !== "credit-debit" &&
-                        styles.tabButtonTextSelected,
-                    ]}
-                  >
-                    Wallet
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.tabButton,
-                    selectedMethod === "credit-debit" &&
-                      styles.tabButtonSelected,
-                  ]}
-                  onPress={() => setSelectedMethod("credit-debit")}
-                >
-                  <Text
-                    style={[
-                      styles.tabButtonText,
-                      selectedMethod === "credit-debit" &&
-                        styles.tabButtonTextSelected,
-                    ]}
-                  >
-                    Credit / Debit
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View>
-                <Text style={styles.sectionLabel}>Summary</Text>
-                <SummaryCard
-                  machineName={machineName}
-                  quantity={quantity}
-                  totalPrice={totalPrice}
-                  totalPoints={totalPoints}
-                  compact
-                />
-              </View>
-
-              {selectedMethod === "credit-debit" ? (
-                <View style={styles.coinflowPlaceholder}>
-                  <Text style={styles.coinflowPlaceholderText}>
-                    Coinflow widget
-                  </Text>
-                </View>
-              ) : (
-                <View>
-                  <Text style={styles.sectionLabel}>Choose Wallet</Text>
-                  <View style={styles.walletCardsRow}>
-                    <WalletOptionCard
-                      label="Beezie wallet"
-                      valueLabel={formatCurrency(balance)}
-                      selected={selectedMethod === "beezie-wallet"}
-                      onPress={() => setSelectedMethod("beezie-wallet")}
-                    />
-                    <WalletOptionCard
-                      label="External wallet"
-                      valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
-                      selected={selectedMethod === "external-wallet"}
-                      onPress={() => setSelectedMethod("external-wallet")}
-                      muted
-                    />
-                  </View>
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.contentRow}>
-              <View style={styles.column}>
-                <Text style={styles.sectionLabel}>Pay with</Text>
-
-                <PaymentOption
-                  label="Beezie wallet"
-                  valueLabel={formatCurrency(balance)}
-                  selected={selectedMethod === "beezie-wallet"}
-                  onPress={() => setSelectedMethod("beezie-wallet")}
-                />
-                <PaymentOption
-                  label="External wallet"
-                  valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
-                  selected={selectedMethod === "external-wallet"}
-                  onPress={() => setSelectedMethod("external-wallet")}
-                />
-                <PaymentOption
-                  label="Credit / Debit"
-                  subLabel="Processing fees may apply"
-                  selected={selectedMethod === "credit-debit"}
-                  onPress={() => setSelectedMethod("credit-debit")}
-                />
-              </View>
-
-              <View style={styles.column}>
-                <Text style={styles.sectionLabel}>Summary</Text>
-                <SummaryCard
-                  machineName={machineName}
-                  quantity={quantity}
-                  totalPrice={totalPrice}
-                  totalPoints={totalPoints}
-                />
-              </View>
-            </View>
-          )}
-
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <Pressable
-            style={[
-              styles.confirmButton,
-              isConfirmDisabled && styles.confirmButtonDisabled,
-            ]}
-            onPress={handleConfirm}
-            disabled={isConfirmDisabled}
-          >
-            {isPurchasing ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text style={styles.confirmButtonText}>Confirm</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
-
-      <CreditDebitSimulationModal
-        visible={isCreditDebitOpen}
-        onClose={() => {
-          setCreditDebitError(null);
-          setIsCreditDebitOpen(false);
-        }}
-        onSimulateSuccess={handleSimulateCardSuccess}
-        onSimulateError={handleSimulateCardError}
-        isProcessing={isPurchasing}
-        errorMessage={creditDebitError}
-      />
+      <View style={styles.overlay}>{cardContent}</View>
+      {creditDebitModal}
     </Modal>
   );
 }
@@ -444,16 +470,16 @@ function WalletOptionCard({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: MODAL_BACKDROP_COLOR,
     alignItems: "center",
     justifyContent: "center",
-    padding: 24,
+    padding: MODAL_OVERLAY_PADDING,
   },
   card: {
     width: "100%",
-    maxWidth: 760,
+    maxWidth: MODAL_CARD_MAX_WIDTH,
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: shape.modalCard,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 32,
@@ -494,7 +520,7 @@ const styles = StyleSheet.create({
   tabButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: shape.secondaryControl,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: "center",
@@ -519,7 +545,7 @@ const styles = StyleSheet.create({
   },
   walletCard: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
@@ -549,7 +575,7 @@ const styles = StyleSheet.create({
   },
   coinflowPlaceholder: {
     minHeight: 120,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: colors.border,
@@ -571,7 +597,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
@@ -587,7 +613,7 @@ const styles = StyleSheet.create({
   radio: {
     width: 18,
     height: 18,
-    borderRadius: 9,
+    borderRadius: shape.circle,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: "center",
@@ -599,7 +625,7 @@ const styles = StyleSheet.create({
   radioDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: shape.circle,
     backgroundColor: colors.gold,
   },
   optionLabel: {
@@ -670,7 +696,7 @@ const styles = StyleSheet.create({
   },
   pointsBadge: {
     backgroundColor: "rgba(245, 197, 24, 0.12)",
-    borderRadius: 999,
+    borderRadius: shape.circle,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
@@ -707,7 +733,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     height: 48,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",

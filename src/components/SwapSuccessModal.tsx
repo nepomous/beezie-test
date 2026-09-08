@@ -1,6 +1,15 @@
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Animated,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { colors } from "../theme/colors";
+import { shape } from "../theme/shape";
 import { formatCurrency } from "../utils/currency";
 
 interface SwapSuccessModalProps {
@@ -19,6 +28,25 @@ export function SwapSuccessModal({
   points,
   onClose,
 }: SwapSuccessModalProps) {
+  const [scale] = useState(() => new Animated.Value(0.9));
+  const [opacity] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        speed: 14,
+        bounciness: 6,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, scale]);
+
   return (
     <Modal
       visible
@@ -29,7 +57,9 @@ export function SwapSuccessModal({
       navigationBarTranslucent
     >
       <View style={styles.overlay}>
-        <View style={styles.card}>
+        <Animated.View
+          style={[styles.card, { opacity, transform: [{ scale }] }]}
+        >
           <View style={styles.checkCircle}>
             <Text style={styles.checkIcon}>✓</Text>
           </View>
@@ -44,10 +74,16 @@ export function SwapSuccessModal({
             </Text>
           </View>
 
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.pressedOpacity,
+            ]}
+            onPress={onClose}
+          >
             <Text style={styles.closeButtonText}>Done</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -64,7 +100,7 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 360,
-    borderRadius: 16,
+    borderRadius: shape.modalCard,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -75,7 +111,7 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: shape.circle,
     backgroundColor: "rgba(74, 222, 128, 0.15)",
     alignItems: "center",
     justifyContent: "center",
@@ -94,7 +130,7 @@ const styles = StyleSheet.create({
   pointsBadge: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: shape.circle,
     backgroundColor: "rgba(245, 197, 24, 0.12)",
     borderWidth: 1,
     borderColor: colors.gold,
@@ -108,7 +144,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     width: "100%",
     height: 44,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
@@ -117,5 +153,8 @@ const styles = StyleSheet.create({
     color: colors.background,
     fontSize: 15,
     fontWeight: "700",
+  },
+  pressedOpacity: {
+    opacity: 0.85,
   },
 });

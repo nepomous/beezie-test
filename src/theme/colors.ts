@@ -12,9 +12,18 @@ export const colors = {
   textPrimary: "#ffffff",
   textSecondary: "#9ca3af",
   textMuted: "#6b7280",
-  gold: "#F5C518",
+  /** Standard project accent yellow — confirmed via Figma dev-mode inspect. */
+  gold: "#FFCA28",
+  /** ~18% darker than `gold`, used for the "Do Not Refresh" progress fill. */
+  goldDark: "#D1A621",
+  /** Desaturated/dimmed `gold`, used for disabled gold buttons (e.g. swap-in-progress) so they stay readable as "still a button" against the dark background instead of fading into it. */
+  goldMuted: "#BE9C37",
   success: "#4ADE80",
   danger: "#F87171",
+  /** Dark outer frame of nested reveal-grid item cards. */
+  cardFrame: "#252525",
+  /** White inner image box nested inside `cardFrame`. */
+  cardSurface: "#FFFFFF",
 } as const;
 
 interface RarityColor {
