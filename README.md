@@ -9,8 +9,11 @@ does not connect to a real wallet, payment provider, or backend.
 
 ## Getting started
 
-Requirements: Node.js and npm, plus the tooling needed for the target platform
-(Android Studio for Android, Xcode for iOS, or a browser for Web).
+Requirements:
+
+- Node.js 20+ (developed and tested with v24.13.1) and npm
+- Plus the tooling needed for the target platform (Android Studio for
+  Android, Xcode for iOS, or a browser for Web)
 
 ```bash
 npm install
@@ -24,6 +27,15 @@ npm run android
 npm run ios
 npm run web
 ```
+
+> **Note on the app icon in Expo Go:** the flow above runs the app through
+> [Expo Go](https://expo.dev/go), which is the default/expected way to run
+> this project. Expo Go always shows its own icon on the device/simulator
+> home screen — the custom app icons (`assets/icon.png`,
+> `assets/android-icon-*.png`) only appear when the app is built natively,
+> e.g. via `npx expo prebuild` + `npx expo run:ios` / `npx expo run:android`,
+> or through an EAS Build. Seeing the Expo Go icon instead of the project's
+> icon while following the steps above is expected, not a bug.
 
 ## Current flow
 
