@@ -96,6 +96,21 @@ each represent a separate feature area beyond what this challenge covers:
 If any of these turn out to be worth prioritizing, happy to discuss scope
 and time trade-offs.
 
+## Note on card artwork
+
+The item images shown throughout the app (reveal grids, item cards, Top
+Items, Recent Pulls) are **not** exported from the Figma file. The Figma
+export for individual cards couldn't be isolated without a baked-in white
+background/selection artifact around each card, which broke the
+responsive image containers used across the grid and card components.
+
+Instead, real trading-card images were sourced from the public
+[pokemontcg.io](https://pokemontcg.io) API, matched by name/rarity to the
+item pool already defined in the mock data (`src/mocks/clawMachines.ts`).
+This keeps the "real image, not a placeholder" goal intact while avoiding
+the Figma export issue — if this is worth revisiting with corrected Figma
+exports, happy to swap the image sources back in.
+
 ## Scripts
 
 | Command                  | Description                                      |
