@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../theme/colors";
+import { radius } from "../theme/shape";
 
 interface QuantityStepperProps {
   quantity: number;
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     overflow: "hidden",
   },
   button: {

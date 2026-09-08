@@ -28,7 +28,10 @@ animation -> reveal -> decision to keep or convert to currency.
 - Must run responsively on iOS, Android, and Web (via react-native-web, already included
   with Expo)
 - TypeScript
-- State management: [DEFINE - for example, Zustand] for cart/quantity, wallet, and reveal session
+- State management: React Context (`WalletContext`/`VaultContext`) for wallet
+  balance and kept items; screen-local `useState` for cart/quantity and
+  reveal session (the original draft above considered Zustand, but the
+  project settled on plain Context — no external state library is used)
 - Local mock data (no real backend) simulating an asynchronous API with Promises and an
   artificial delay to simulate network latency
 - Claw/box opening videos: `expo-video` (or `expo-av`, depending on the template's Expo

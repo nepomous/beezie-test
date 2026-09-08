@@ -26,10 +26,6 @@ interface RevealSingleModalProps {
   visible: boolean;
   item: ClawItem | null;
   onClose: () => void;
-  /** 0-based position of `item` within the pull, used for multi-item pulls. */
-  itemIndex?: number;
-  /** Total number of items in the pull; the "Item X of N" label only shows when > 1. */
-  itemCount?: number;
 }
 
 interface SuccessState {
@@ -38,17 +34,13 @@ interface SuccessState {
 }
 
 /**
- * Fullscreen reveal modal for a single item. Also reused to step through a
- * multi-item pull one item at a time (see `itemIndex`/`itemCount`), since
- * there's no dedicated grid reveal yet.
+ * Fullscreen reveal modal for a single-item pull (QTY = 1).
  * Desktop: image left, details right. Mobile: stacked, image on top.
  */
 export function RevealSingleModal({
   visible,
   item,
   onClose,
-  itemIndex,
-  itemCount,
 }: RevealSingleModalProps) {
   const { isMobile } = useResponsive();
   const { credit } = useWallet();
@@ -138,13 +130,6 @@ export function RevealSingleModal({
                 !isMobile && styles.detailsColumnDesktop,
               ]}
             >
-              {itemCount !== undefined &&
-                itemCount > 1 &&
-                itemIndex !== undefined && (
-                  <Text style={styles.itemProgress}>
-                    Item {itemIndex + 1} of {itemCount}
-                  </Text>
-                )}
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.swapLabel}>Swap Value</Text>
               <Text style={styles.swapValue}>
@@ -262,13 +247,6 @@ const styles = StyleSheet.create({
   },
   detailsColumnDesktop: {
     flex: 1,
-  },
-  itemProgress: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   itemName: {
     color: colors.textPrimary,

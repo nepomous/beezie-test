@@ -12,15 +12,9 @@ import type {
   PullResult,
   Rarity,
   RecentPull,
-  Wallet,
 } from "../types/claw";
 
 const REVEAL_WINDOW_MS = 15 * 60 * 1000; // 15 minutes to decide whether to swap or keep
-
-const mockWallet: Wallet = {
-  beezieBalance: 2500,
-  externalBalance: 1000,
-};
 
 function randomDelay(minMs = 300, maxMs = 600): Promise<void> {
   const ms = minMs + Math.random() * (maxMs - minMs);
@@ -72,11 +66,6 @@ export async function getRecentPulls(machineId: string): Promise<RecentPull[]> {
 export async function getMoreClawMachines(): Promise<ClawMachineSummary[]> {
   await randomDelay();
   return getMoreClawMachinesMock();
-}
-
-export async function getWallet(): Promise<Wallet> {
-  await randomDelay();
-  return { ...mockWallet };
 }
 
 export async function purchasePull(

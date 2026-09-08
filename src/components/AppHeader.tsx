@@ -15,6 +15,7 @@ import ProfileImage from "../assets/mock_profile_image.svg";
 import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { colors } from "../theme/colors";
+import { radius } from "../theme/shape";
 import { formatCurrency } from "../utils/currency";
 
 const NAV_ITEMS = [
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     gap: 8,
     height: 36,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surface,
   },
   balanceText: {

@@ -30,26 +30,59 @@ npm run web
 1. Load the Pokémon Gold Claw machine and its recent pulls.
 2. Choose a quantity from 1 to 10 and press **Start Now**.
 3. Review the mocked payment summary and confirm with the Beezie wallet.
-4. Play the fullscreen claw opening animation.
-5. Reveal the pulled item(s), then keep or swap each item.
-
-The home screen includes the machine image, price, reward points, rarity odds,
-Top Items, and Recent Pulls. The layout stacks on narrow screens and switches
-to a two-column presentation on wider tablet and Web viewports.
+4. See the "What you can pull" preview screen while the pull result loads.
+5. Play the fullscreen claw opening animation.
+6. Reveal the pulled item(s), then keep or swap each item.
 
 ## Implementation status
 
 - Payment is represented by `PaymentModal`, supporting the Beezie wallet
-  (real balance/deduction), a placeholder external wallet (always $0, so it's
-  disabled), and a simulated credit/debit flow via
+  (real balance/deduction), a placeholder external wallet (always $0, so
+  it's disabled), and a simulated credit/debit flow via
   `CreditDebitSimulationModal`. Promo codes are not connected to real
   services.
-- Pull results are generated locally by `src/services/clawService.ts` using the
-  machine's rarity weights and item pool.
+- After confirming payment, `WhatYouCanPullScreen` previews the machine's
+  item pool (crossfading one item at a time) while the pull result loads,
+  right before the claw opening animation plays.
+- Pull results are generated locally by `src/services/clawService.ts`
+  using the machine's rarity weights and item pool.
 - A pull has a shared 15-minute reveal window in the service model.
-- Multiple-item pulls are currently revealed one item at a time. The grid,
-  select-all control, countdown UI, and bulk swap flow described in `SPEC.md`
-  are still pending.
+- Multi-item pulls (QTY > 1) are revealed with `RevealMultipleModal`: a
+  responsive grid of all pulled items, a "Select all" / "Clear" control,
+  a shared countdown that auto-expires the pull, and both per-item and
+  bulk swap actions, each going through an async loading state before
+  crediting the wallet.
+- Single-item pulls (QTY = 1) use `RevealSingleModal`, with the same
+  functional parity as the multi-item flow: real swap/keep actions, an
+  async loading state, and the `SwapSuccessModal` confirmation.
+- Kept (non-swapped) items are tracked in `VaultContext`, alongside the
+  wallet balance/points tracked in `WalletContext`.
+
+## Scope decisions
+
+A few product surfaces referenced in the mock data or UI are intentionally
+left as visual placeholders rather than fully implemented, since they'd
+each represent a separate feature area beyond what this challenge covers:
+
+- **External wallet linking**: the payment modal shows an "External
+  wallet" option with a real UI affordance, but it's hard-coded to a $0
+  balance and disabled. Wiring this up would require an actual external
+  wallet integration (OAuth-style linking flow, balance sync), which has
+  no meaningful mock equivalent without inventing a fictional provider.
+- **Promo codes**: "Apply promo code" is currently a static label with no
+  input, validation, or discount logic. A real implementation would need
+  a promo code service (validation rules, expiry, stacking rules with
+  existing pricing) that felt out of scope for a pull/reveal-focused
+  technical exercise.
+- **"More Claw Machines" navigation**: tapping a machine card in this
+  section shows a "coming soon" alert instead of navigating to a machine
+  detail/switch flow. The app only ships one machine's worth of mock data
+  (`pokemonGoldClaw`); building out multi-machine navigation would mean
+  duplicating the entire purchase/reveal flow's data model for machines
+  that don't have distinct content yet.
+
+If any of these turn out to be worth prioritizing, happy to discuss scope
+and time trade-offs.
 
 ## Scripts
 
@@ -64,23 +97,35 @@ to a two-column presentation on wider tablet and Web viewports.
 | `npx tsc --noEmit`       | Type-check without emitting files                |
 | `npx expo export -p web` | Verify that the Web bundle exports successfully  |
 
-For deterministic Jest runs, the mocked service delays are flushed with fake
-timers in `__tests__/App.test.tsx`. `__mocks__/expo-video.js` provides the
+`__tests__/App.test.tsx` renders the app through
+`expo-router/testing-library`'s `renderRouter` and flushes the mocked
+service delays with fake timers. `__mocks__/expo-video.js` provides the
 `expo-video` mock used by Jest.
 
 ## Project structure
 
 ```text
-App.tsx                         # App entry point
-src/screens/ClawHeroScreen.tsx  # Main screen and flow orchestration
-src/components/                 # Odds, quantity, payment, video, and reveal UI
-src/services/clawService.ts     # Mock machine, wallet, and pull operations
+app/_layout.tsx                  # Expo Router root layout
+app/index.tsx                    # Expo Router entry route, renders ClawHeroScreen
+src/screens/ClawHeroScreen.tsx   # Main screen and flow orchestration
+src/components/                  # Odds, quantity, payment, video, and reveal UI
+  ItemCard.tsx                    #   Shared item image/name/rarity card
+  PurchaseFlowModal.tsx           #   Payment -> "What you can pull" stage container
+  WhatYouCanPullScreen.tsx        #   Item-pool preview shown before the opening animation
+  RevealMultipleModal.tsx         #   Grid reveal + bulk/individual swap for QTY > 1
+  RevealSingleModal.tsx           #   Single-item reveal + swap for QTY = 1
+  SwapSuccessModal.tsx            #   Swap confirmation (amount/points credited)
+src/services/clawService.ts      # Mock machine, wallet, and pull operations
+src/context/WalletContext.tsx    # Wallet balance/points state
+src/contexts/VaultContext.tsx    # Kept (non-swapped) items state
+src/config/points.ts             # Swap point calculation
 src/mocks/                       # Machine and recent-pull data
 src/types/                       # Domain models and payment types
 src/hooks/                       # Shared responsive hooks
-src/theme/                       # Colors and breakpoints
+src/theme/                       # Colors, breakpoints, shape, and modal-card tokens
+src/utils/                       # Currency formatting and simulated async delays
 src/assets/videos/               # Bundled opening-animation videos
-__tests__/                       # App and component tests
+__tests__/                       # App-level tests (rendered via Expo Router)
 ```
 
 ## Video assets

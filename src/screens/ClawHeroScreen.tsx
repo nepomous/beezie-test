@@ -28,6 +28,7 @@ import {
   getRecentPulls,
 } from "../services/clawService";
 import { colors } from "../theme/colors";
+import { radius, shape } from "../theme/shape";
 import type { ClawMachine, PullResult, RecentPull } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 
@@ -52,7 +53,6 @@ export function ClawHeroScreen() {
     null,
   );
   const [revealResult, setRevealResult] = useState<PullResult | null>(null);
-  const [revealIndex, setRevealIndex] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -195,9 +195,13 @@ export function ClawHeroScreen() {
                     ]}
                   >
                     <Image
-                      source={mockPackageLarge}
+                      source={
+                        item.imageUrl
+                          ? { uri: item.imageUrl }
+                          : mockPackageLarge
+                      }
                       style={styles.topItemImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                     <Text style={styles.topItemName} numberOfLines={2}>
                       {item.name}
@@ -216,9 +220,13 @@ export function ClawHeroScreen() {
                 {recentPulls.map((pull) => (
                   <View key={pull.id} style={styles.recentPullRow}>
                     <Image
-                      source={mockPackageSmall}
+                      source={
+                        pull.item.imageUrl
+                          ? { uri: pull.item.imageUrl }
+                          : mockPackageSmall
+                      }
                       style={styles.recentPullImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                     <View style={styles.recentPullInfo}>
                       <Text style={styles.recentPullName} numberOfLines={1}>
@@ -269,7 +277,6 @@ export function ClawHeroScreen() {
           videoUrl={machine.videoOpeningUrl}
           onAnimationEnd={() => {
             setRevealResult(activePullResult);
-            setRevealIndex(0);
             setActivePullResult(null);
           }}
         />
@@ -282,22 +289,14 @@ export function ClawHeroScreen() {
           expiresAt={revealResult.expiresAt}
           onClose={() => {
             setRevealResult(null);
-            setRevealIndex(0);
           }}
         />
       ) : (
         <RevealSingleModal
           visible={!!revealResult}
-          item={revealResult?.items[revealIndex] ?? null}
-          itemIndex={revealIndex}
-          itemCount={revealResult?.items.length}
+          item={revealResult?.items[0] ?? null}
           onClose={() => {
-            if (revealResult && revealIndex < revealResult.items.length - 1) {
-              setRevealIndex((current) => current + 1);
-            } else {
-              setRevealResult(null);
-              setRevealIndex(0);
-            }
+            setRevealResult(null);
           }}
         />
       )}
@@ -330,7 +329,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     height: 44,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
@@ -362,7 +361,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   machineImage: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
   },
   purchaseColumn: {
@@ -411,7 +410,7 @@ const styles = StyleSheet.create({
   startButton: {
     flex: 1,
     height: 44,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
@@ -448,14 +447,14 @@ const styles = StyleSheet.create({
   },
   topItemCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     padding: 8,
     gap: 4,
   },
   topItemImage: {
     width: "100%",
     aspectRatio: 0.8,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surfaceAlt,
   },
   topItemName: {
@@ -476,13 +475,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     padding: 8,
   },
   recentPullImage: {
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surfaceAlt,
   },
   recentPullInfo: {

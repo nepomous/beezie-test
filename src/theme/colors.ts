@@ -24,6 +24,8 @@ export const colors = {
   cardFrame: "#252525",
   /** White inner image box nested inside `cardFrame`. */
   cardSurface: "#FFFFFF",
+  /** Unselected state of the item-card selection badge (solid black, no transparency). */
+  badgeUnselected: "#000000",
 } as const;
 
 interface RarityColor {

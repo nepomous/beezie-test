@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import { colors } from "../theme/colors";
+import { shape } from "../theme/shape";
 
 interface CreditDebitSimulationModalProps {
   visible: boolean;
@@ -89,7 +90,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 380,
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: shape.modalCard,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 24,
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   },
   successButton: {
     height: 44,
-    borderRadius: 8,
+    borderRadius: shape.button,
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   },
   errorButton: {
     height: 44,
-    borderRadius: 8,
+    borderRadius: shape.button,
     borderWidth: 1,
     borderColor: colors.danger,
     alignItems: "center",
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     height: 44,
-    borderRadius: 8,
+    borderRadius: shape.button,
     alignItems: "center",
     justifyContent: "center",
   },

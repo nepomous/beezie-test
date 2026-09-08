@@ -11,6 +11,7 @@ import Box500Icon from "../assets/icons/500_box_icon.svg";
 import Box30Icon from "../assets/icons/30_box_icon.svg";
 import type { ClawMachineSummary } from "../mocks/clawMachines";
 import { colors } from "../theme/colors";
+import { radius, shape } from "../theme/shape";
 import { formatCurrency } from "../utils/currency";
 
 interface MoreClawMachinesProps {
@@ -84,14 +85,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     paddingVertical: 12,
     paddingHorizontal: 8,
   },
   iconChip: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",

@@ -19,7 +19,7 @@ import {
   MODAL_CARD_MAX_WIDTH,
   MODAL_OVERLAY_PADDING,
 } from "../theme/modalCard";
-import { shape } from "../theme/shape";
+import { radius, shape } from "../theme/shape";
 import type { PaymentMethod, PullResult } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 import { CreditDebitSimulationModal } from "./CreditDebitSimulationModal";
@@ -242,18 +242,21 @@ export function PaymentModal({
             <Text style={styles.sectionLabel}>Pay with</Text>
 
             <PaymentOption
+              testID="payment-option-beezie-wallet"
               label="Beezie wallet"
               valueLabel={formatCurrency(balance)}
               selected={selectedMethod === "beezie-wallet"}
               onPress={() => setSelectedMethod("beezie-wallet")}
             />
             <PaymentOption
+              testID="payment-option-external-wallet"
               label="External wallet"
               valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
               selected={selectedMethod === "external-wallet"}
               onPress={() => setSelectedMethod("external-wallet")}
             />
             <PaymentOption
+              testID="payment-option-credit-debit"
               label="Credit / Debit"
               subLabel="Processing fees may apply"
               selected={selectedMethod === "credit-debit"}
@@ -273,9 +276,14 @@ export function PaymentModal({
         </View>
       )}
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Text testID="payment-error" style={styles.errorText}>
+          {error}
+        </Text>
+      )}
 
       <Pressable
+        testID="confirm-button"
         style={[
           styles.confirmButton,
           isConfirmDisabled && styles.confirmButtonDisabled,
@@ -336,6 +344,7 @@ interface PaymentOptionProps {
   subLabel?: string;
   selected: boolean;
   onPress: () => void;
+  testID?: string;
 }
 
 function PaymentOption({
@@ -344,9 +353,11 @@ function PaymentOption({
   subLabel,
   selected,
   onPress,
+  testID,
 }: PaymentOptionProps) {
   return (
     <Pressable
+      testID={testID}
       style={[styles.option, selected && styles.optionSelected]}
       onPress={onPress}
     >
@@ -644,7 +655,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: shape.secondaryCard,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
@@ -659,7 +670,7 @@ const styles = StyleSheet.create({
   summaryImage: {
     width: 56,
     height: 56,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     backgroundColor: colors.surface,
   },
   summaryItemInfo: {

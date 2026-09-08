@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors, rarityColors } from "../theme/colors";
+import { radius } from "../theme/shape";
 import type { OddsTier } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   tierCard: {
     width: "31%",
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     padding: 8,
     gap: 2,
   },

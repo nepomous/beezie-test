@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: shape.circle,
-    backgroundColor: "#000000",
+    backgroundColor: colors.badgeUnselected,
     alignItems: "center",
     justifyContent: "center",
   },
