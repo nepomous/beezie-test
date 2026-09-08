@@ -1,7 +1,7 @@
+import { Image } from "expo-image";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import summaryImage from "../assets/Solana Claw.webp";
+import summaryImage from "../assets/solana-claw.webp";
 import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { purchasePull } from "../services/clawService";

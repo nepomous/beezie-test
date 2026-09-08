@@ -83,10 +83,19 @@ export async function purchasePull(
     throw new Error("Pull quantity must be at least 1.");
   }
 
-  const items = Array.from({ length: quantity }, () => drawItem(machine));
+  const pullId = `pull-${machineId}-${paymentMethod}-${Date.now()}`;
+
+  // Give each draw a unique instance id scoped to this pull — the catalog
+  // item id repeats whenever the same item is drawn more than once, which
+  // broke per-item selection/swap state (and React list keys) in the reveal
+  // modals.
+  const items = Array.from({ length: quantity }, (_, index) => {
+    const drawn = drawItem(machine);
+    return { ...drawn, id: `${pullId}-${drawn.id}-${index}` };
+  });
 
   return {
-    pullId: `pull-${machineId}-${paymentMethod}-${Date.now()}`,
+    pullId,
     items,
     expiresAt: Date.now() + REVEAL_WINDOW_MS,
   };
