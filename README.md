@@ -114,6 +114,14 @@ each represent a separate feature area beyond what this challenge covers:
   weighted by rarity, not by matching an exact value range, but it's
   worth calling out explicitly rather than leaving it implicit.
 
+- **Quantity stepper click sound**: pressing "+"/"-" on the pull quantity
+  stepper plays a short 8-bit-style "menu tick" blip. This is a fully
+  synthesized, generic UI click sound (`src/assets/sounds/menu-tick.wav`)
+  built from scratch for this project — it is **not** an audio clip
+  extracted from any real Pokémon game. Using actual Pokémon SFX would
+  raise copyright concerns (they're Nintendo/Game Freak property), so a
+  royalty-free, similarly-styled sound was used instead.
+
 If any of these turn out to be worth prioritizing, happy to discuss scope
 and time trade-offs.
 

@@ -1,7 +1,12 @@
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useAudioPlayer } from "expo-audio";
 
 import { colors } from "../theme/colors";
 import { radius } from "../theme/shape";
+
+// Synthesized 8-bit-style "menu tick" blip (see README's "Scope decisions").
+const clickSoundAsset = require("../assets/sounds/menu-tick.wav");
 
 interface QuantityStepperProps {
   quantity: number;
@@ -21,6 +26,19 @@ export function QuantityStepper({
 }: QuantityStepperProps) {
   const canDecrease = !disabled && quantity > min;
   const canIncrease = !disabled && quantity < max;
+  const clickPlayer = useAudioPlayer(clickSoundAsset);
+
+  // Rewind + replay the same player instance on every click (rather than
+  // creating a new one) so rapid/repeated clicks never stack overlapping
+  // playback. Never let a playback failure block the actual quantity change.
+  const playClickSound = useCallback(() => {
+    try {
+      clickPlayer.seekTo(0)?.catch(() => {});
+      clickPlayer.play();
+    } catch {
+      // Ignore playback errors (e.g. unsupported format/platform quirk).
+    }
+  }, [clickPlayer]);
 
   return (
     <View style={styles.container}>
@@ -28,7 +46,10 @@ export function QuantityStepper({
         accessibilityRole="button"
         accessibilityLabel="Decrease quantity"
         disabled={!canDecrease}
-        onPress={() => onChange(Math.max(min, quantity - 1))}
+        onPress={() => {
+          playClickSound();
+          onChange(Math.max(min, quantity - 1));
+        }}
         style={[styles.button, !canDecrease && styles.buttonDisabled]}
       >
         <Text
@@ -44,7 +65,10 @@ export function QuantityStepper({
         accessibilityRole="button"
         accessibilityLabel="Increase quantity"
         disabled={!canIncrease}
-        onPress={() => onChange(Math.min(max, quantity + 1))}
+        onPress={() => {
+          playClickSound();
+          onChange(Math.min(max, quantity + 1));
+        }}
         style={[styles.button, !canIncrease && styles.buttonDisabled]}
       >
         <Text
