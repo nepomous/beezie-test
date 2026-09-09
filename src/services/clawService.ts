@@ -15,7 +15,7 @@ import type {
   RecentPull,
 } from "../types/claw";
 
-const REVEAL_WINDOW_MS = 15 * 60 * 1000; // 15 minutes to decide whether to swap or keep
+const REVEAL_WINDOW_MS = 5 * 60 * 1000; // 5 minutes to decide whether to swap or keep
 
 function randomDelay(minMs = 300, maxMs = 600): Promise<void> {
   const ms = minMs + Math.random() * (maxMs - minMs);

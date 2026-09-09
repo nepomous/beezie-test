@@ -49,8 +49,8 @@ describe("clawService", () => {
       expect(result.items).toHaveLength(25);
     });
 
-    it("sets expiresAt to a 15-minute window from the moment the pull resolves", async () => {
-      const REVEAL_WINDOW_MS = 15 * 60 * 1000;
+    it("sets expiresAt to a 5-minute window from the moment the pull resolves", async () => {
+      const REVEAL_WINDOW_MS = 5 * 60 * 1000;
       const startTime = new Date("2026-01-01T00:00:00.000Z").getTime();
       jest.setSystemTime(startTime);
 
@@ -59,7 +59,7 @@ describe("clawService", () => {
       const result = await promise;
 
       // randomDelay() resolves 300-600ms after the call, so expiresAt lands
-      // that same window past the 15-minute mark from the pull's start time.
+      // that same window past the 5-minute mark from the pull's start time.
       expect(result.expiresAt).toBeGreaterThanOrEqual(
         startTime + 300 + REVEAL_WINDOW_MS,
       );

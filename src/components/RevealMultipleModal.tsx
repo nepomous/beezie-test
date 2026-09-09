@@ -56,9 +56,13 @@ function formatCountdown(expiresAt: number | null, now: number): string {
 
 /**
  * Fullscreen grid reveal modal for a multi-item pull (QTY > 1). All items
- * start selected (checkmark); the user deselects the ones to keep in the
- * vault. Supports per-card swaps and a bulk footer swap, both of which go
- * through an artificial loading delay before crediting the wallet.
+ * start deselected; the user selects the ones to swap for cash. Supports
+ * per-card swaps and a bulk footer swap, both of which go through an
+ * artificial loading delay before crediting the wallet. Swapped items stay
+ * visible in the grid in a disabled "Swapped" state instead of disappearing.
+ * If the countdown expires before the user acts, any items not yet swapped
+ * are automatically credited to the vault and the grid locks into a
+ * read-only "expired" state without closing the modal.
  */
 export function RevealMultipleModal({
   visible,
@@ -72,9 +76,11 @@ export function RevealMultipleModal({
   const insets = useSafeAreaInsets();
 
   const [remainingItems, setRemainingItems] = useState<ClawItem[]>(items);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(items.map((item) => item.id)),
-  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  // Items that have individually or as part of a batch resolved a swap —
+  // they stay in `remainingItems` (so the grid keeps showing them) but
+  // render in a disabled "Swapped" terminal state instead of disappearing.
+  const [swappedIds, setSwappedIds] = useState<Set<string>>(() => new Set());
   const [swappingIds, setSwappingIds] = useState<Set<string>>(new Set());
   // Rolled swap duration per item id, so the progress bar animates over the
   // exact same duration used by the `simulateSwapDelay` await.
@@ -93,39 +99,71 @@ export function RevealMultipleModal({
   const [resetForItems, setResetForItems] = useState(items);
   // Guards the auto-expire effect below so it only fires once per pull.
   const hasAutoExpiredRef = useRef(false);
+  // True once the countdown has expired; the modal stays open in a
+  // read-only state instead of auto-closing (see `creditRemainingOnExpiry`).
+  const [isExpired, setIsExpired] = useState(false);
   const [countdownPulse] = useState(() => new Animated.Value(0));
   const [footerSwapProgress] = useState(() => new Animated.Value(0));
 
   if (items !== resetForItems) {
     setResetForItems(items);
     setRemainingItems(items);
-    setSelectedIds(new Set(items.map((item) => item.id)));
+    setSelectedIds(new Set());
+    setSwappedIds(new Set());
     setSwappingIds(new Set());
     setSwappingDurations(new Map());
     setSuccessResult(null);
     setCloseOnSuccessDismiss(false);
+    setIsExpired(false);
   }
 
   useEffect(() => {
     hasAutoExpiredRef.current = false;
   }, [items]);
 
-  // Marks every item not currently mid-swap as kept in the vault, then
-  // closes the whole reveal. Used by the X button and by the countdown
-  // auto-expiring; an in-flight swap is left alone so it can still resolve.
-  const resolveAndClose = useCallback(() => {
-    const itemsToKeep = remainingItems.filter(
-      (item) => !swappingIds.has(item.id),
-    );
+  // Items still pending a decision: not mid-swap and not already swapped.
+  // Shared by both the manual-close and auto-expiry crediting paths below.
+  const getItemsToKeep = useCallback(
+    () =>
+      remainingItems.filter(
+        (item) => !swappingIds.has(item.id) && !swappedIds.has(item.id),
+      ),
+    [remainingItems, swappingIds, swappedIds],
+  );
+
+  // Credits every item still pending a decision to the vault, then closes
+  // the whole reveal. Used by the "X" button before the countdown expires.
+  const creditRemainingAndClose = useCallback(() => {
+    const itemsToKeep = getItemsToKeep();
     if (itemsToKeep.length > 0) {
       vault.addKept(itemsToKeep);
     }
-    setRemainingItems((current) =>
-      current.filter((item) => swappingIds.has(item.id)),
-    );
     setSelectedIds(new Set());
     onClose();
-  }, [remainingItems, swappingIds, vault, onClose]);
+  }, [getItemsToKeep, vault, onClose]);
+
+  // Credits every item still pending a decision to the vault WITHOUT
+  // closing the modal — the grid stays open in a read-only "expired" state
+  // so the user can still see (but not act on) what happened.
+  const creditRemainingOnExpiry = useCallback(() => {
+    const itemsToKeep = getItemsToKeep();
+    if (itemsToKeep.length > 0) {
+      vault.addKept(itemsToKeep);
+    }
+    setSelectedIds(new Set());
+    setIsExpired(true);
+  }, [getItemsToKeep, vault]);
+
+  // The "X" button always just closes once the offer has already expired
+  // (the remaining items were already credited at expiry time), otherwise
+  // it credits them now and closes.
+  const handleCloseButtonPress = () => {
+    if (isExpired) {
+      onClose();
+    } else {
+      creditRemainingAndClose();
+    }
+  };
 
   useEffect(() => {
     if (!expiresAt) return undefined;
@@ -202,18 +240,18 @@ export function RevealMultipleModal({
     if (!expiresAt || successResult || now < expiresAt) return;
     if (hasAutoExpiredRef.current) return;
     hasAutoExpiredRef.current = true;
-    resolveAndClose();
-  }, [expiresAt, now, successResult, resolveAndClose]);
+    creditRemainingOnExpiry();
+  }, [expiresAt, now, successResult, creditRemainingOnExpiry]);
 
   const selectedTotal = useMemo(
     () =>
       remainingItems
-        .filter((item) => selectedIds.has(item.id))
+        .filter((item) => selectedIds.has(item.id) && !swappedIds.has(item.id))
         .reduce((sum, item) => sum + item.fairMarketValue, 0),
-    [remainingItems, selectedIds],
+    [remainingItems, selectedIds, swappedIds],
   );
 
-  if (remainingItems.length === 0 && items.length === 0) return null;
+  if (items.length === 0) return null;
 
   const toggleSelected = (id: string) => {
     setSelectedIds((current) => {
@@ -229,7 +267,10 @@ export function RevealMultipleModal({
 
   const handleToggleAll = () => {
     if (selectedIds.size === 0) {
-      setSelectedIds(new Set(remainingItems.map((item) => item.id)));
+      const selectableIds = remainingItems
+        .filter((item) => !swappedIds.has(item.id))
+        .map((item) => item.id);
+      setSelectedIds(new Set(selectableIds));
     } else {
       setSelectedIds(new Set());
     }
@@ -243,10 +284,14 @@ export function RevealMultipleModal({
 
     credit(item.fairMarketValue);
 
-    const willCloseAll = remainingItems.length <= 1;
-    setRemainingItems((current) =>
-      current.filter((entry) => entry.id !== item.id),
-    );
+    // How many items (including this one) haven't been swapped yet — if
+    // this was the last one, dismissing the success modal closes the whole
+    // reveal instead of returning to a now-fully-resolved grid.
+    const notYetSwappedCount = remainingItems.filter(
+      (entry) => !swappedIds.has(entry.id),
+    ).length;
+    const willCloseAll = notYetSwappedCount <= 1;
+    setSwappedIds((current) => new Set(current).add(item.id));
     setSelectedIds((current) => {
       const next = new Set(current);
       next.delete(item.id);
@@ -275,7 +320,7 @@ export function RevealMultipleModal({
 
     const itemsToSwap = remainingItems.filter((item) => idsToSwap.has(item.id));
     const itemsToKeep = remainingItems.filter(
-      (item) => !idsToSwap.has(item.id),
+      (item) => !idsToSwap.has(item.id) && !swappedIds.has(item.id),
     );
 
     const duration = rollSwapDuration();
@@ -292,7 +337,7 @@ export function RevealMultipleModal({
     credit(total);
     vault.addKept(itemsToKeep);
 
-    setRemainingItems([]);
+    setSwappedIds((current) => new Set([...current, ...idsToSwap]));
     setSelectedIds(new Set());
     setSwappingIds(new Set());
     setSwappingDurations(new Map());
@@ -307,14 +352,15 @@ export function RevealMultipleModal({
     }
   };
 
-  const isBulkActionDisabled = selectedIds.size === 0 || isFooterSwapping;
+  const isBulkActionDisabled =
+    selectedIds.size === 0 || isFooterSwapping || isExpired;
 
   return (
     <Modal
       visible={visible}
       transparent={false}
       animationType="fade"
-      onRequestClose={resolveAndClose}
+      onRequestClose={handleCloseButtonPress}
       statusBarTranslucent
       navigationBarTranslucent
     >
@@ -325,7 +371,7 @@ export function RevealMultipleModal({
               styles.closeButton,
               pressed && styles.pressedOpacity,
             ]}
-            onPress={resolveAndClose}
+            onPress={handleCloseButtonPress}
             hitSlop={12}
             testID="close-button"
             accessibilityRole="button"
@@ -344,6 +390,8 @@ export function RevealMultipleModal({
                 onToggleSelect={() => toggleSelected(item.id)}
                 swapping={swappingIds.has(item.id)}
                 swapDurationMs={swappingDurations.get(item.id)}
+                swapped={swappedIds.has(item.id)}
+                swapDisabled={isExpired}
                 onSwap={() => handleSwapSingle(item)}
               />
             </View>
@@ -357,14 +405,14 @@ export function RevealMultipleModal({
               isCountdownCritical && { color: countdownTextColor },
             ]}
           >
-            {formatCountdown(expiresAt, now)}
+            {isExpired ? "Expired" : formatCountdown(expiresAt, now)}
           </Animated.Text>
 
           <View style={styles.footerActions}>
             <Pressable
               style={({ pressed }) => pressed && styles.pressedOpacity}
               onPress={handleToggleAll}
-              disabled={swappingIds.size > 0}
+              disabled={swappingIds.size > 0 || isExpired}
               testID="footer-select-all"
               hitSlop={8}
             >
@@ -392,7 +440,9 @@ export function RevealMultipleModal({
                   ]}
                 />
               )}
-              {isFooterSwapping ? (
+              {isExpired ? (
+                <Text style={styles.bulkSwapButtonText}>Offer expired</Text>
+              ) : isFooterSwapping ? (
                 <View style={styles.footerSwappingRow}>
                   <ActivityIndicator color={colors.background} size="small" />
                   <Text style={styles.bulkSwapButtonText}>

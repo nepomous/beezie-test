@@ -32,6 +32,10 @@ interface ItemCardProps {
   onSwap?: () => void;
   /** When set while `swapping` is true, animates a fill bar across the swap button over this exact duration (ms). Omit to keep the plain spinner-only loading state. */
   swapDurationMs?: number;
+  /** Locks the card into a persistent "already swapped" terminal state: dims the image, shows a non-interactive checkmark badge, and replaces the swap button with a disabled "Swapped" label. */
+  swapped?: boolean;
+  /** Disables the swap button (without changing its label) independently of `swapped`, e.g. once the reveal offer has expired. */
+  swapDisabled?: boolean;
   /** Overrides the caption text (defaults to `item.name`). */
   caption?: string;
   /** When true, hides the caption/name text entirely. */
@@ -54,6 +58,8 @@ export function ItemCard({
   swapping = false,
   onSwap,
   swapDurationMs,
+  swapped = false,
+  swapDisabled = false,
 }: ItemCardProps) {
   const [badgeScale] = useState(() => new Animated.Value(1));
   const [swapOpacity] = useState(() => new Animated.Value(1));
@@ -130,11 +136,11 @@ export function ItemCard({
       <View style={itemFrame.itemFrameInner}>
         <Image
           source={item.imageUrl ? { uri: item.imageUrl } : mockReward}
-          style={styles.cardImage}
+          style={[styles.cardImage, swapped && styles.cardImageSwapped]}
           resizeMode="contain"
           testID={`card-image-${item.id}`}
         />
-        {onToggleSelect && (
+        {(onToggleSelect || swapped) && (
           <Animated.View
             style={[
               styles.selectBadgeWrapper,
@@ -144,25 +150,29 @@ export function ItemCard({
             <Pressable
               style={({ pressed }) => [
                 styles.selectBadge,
-                selected && styles.selectBadgeSelected,
+                (selected || swapped) && styles.selectBadgeSelected,
                 pressed && styles.pressedOpacity,
               ]}
               onPress={onToggleSelect}
-              disabled={swapping}
+              disabled={swapping || swapped}
               hitSlop={8}
               testID={`select-badge-${item.id}`}
               accessibilityRole="button"
               accessibilityLabel={
-                selected ? `Deselect ${item.name}` : `Select ${item.name}`
+                swapped
+                  ? `${item.name} already swapped`
+                  : selected
+                    ? `Deselect ${item.name}`
+                    : `Select ${item.name}`
               }
             >
               <Text
                 style={[
                   styles.selectBadgeText,
-                  selected && styles.selectBadgeTextSelected,
+                  (selected || swapped) && styles.selectBadgeTextSelected,
                 ]}
               >
-                {selected ? "✓" : "+"}
+                {selected || swapped ? "✓" : "+"}
               </Text>
             </Pressable>
           </Animated.View>
@@ -178,15 +188,15 @@ export function ItemCard({
             {caption ?? item.name}
           </Text>
 
-          {onSwap && (
+          {(onSwap || swapped) && (
             <Pressable
               style={({ pressed }) => [
                 styles.swapButton,
-                swapping && styles.swapButtonDisabled,
+                (swapping || swapped) && styles.swapButtonDisabled,
                 pressed && styles.pressedOpacity,
               ]}
               onPress={onSwap}
-              disabled={swapping}
+              disabled={swapping || swapped || swapDisabled}
               testID={`swap-button-${item.id}`}
             >
               {swapping && typeof swapDurationMs === "number" && (
@@ -199,7 +209,9 @@ export function ItemCard({
                 />
               )}
               <Animated.View style={{ opacity: swapOpacity }}>
-                {swapping ? (
+                {swapped ? (
+                  <Text style={styles.swapButtonText}>Swapped</Text>
+                ) : swapping ? (
                   <View style={styles.swappingRow}>
                     <ActivityIndicator color={colors.background} size="small" />
                     <Text style={styles.swapButtonText}>SWAP in progress</Text>
@@ -222,6 +234,9 @@ const styles = StyleSheet.create({
   cardImage: {
     width: "100%",
     height: "100%",
+  },
+  cardImageSwapped: {
+    opacity: 0.4,
   },
   selectBadgeWrapper: {
     position: "absolute",
