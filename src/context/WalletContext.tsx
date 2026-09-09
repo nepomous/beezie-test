@@ -7,40 +7,60 @@ import {
   type PropsWithChildren,
 } from "react";
 
-const INITIAL_BALANCE = 1000;
+import type { Wallet } from "../types/claw";
 
-interface WalletContextValue {
+const INITIAL_BEEZIE_BALANCE = 1000;
+// External wallet is a real balance now (was a hardcoded $0 placeholder
+// inside PaymentModal), but there's no top-up/linking flow yet, so it's a
+// fixed starting balance with no setter.
+const INITIAL_EXTERNAL_BALANCE = 25000;
+
+interface WalletContextValue extends Wallet {
+  /**
+   * Alias for `beezieBalance`, kept for backward compatibility with
+   * call sites that predate the external wallet (header balance display,
+   * `RevealSingleModal`/`RevealMultipleModal` reward crediting, existing
+   * tests). New code should prefer `beezieBalance`.
+   */
   balance: number;
-  /** Returns true when `amount` can be spent without the balance going negative. */
+  /** Returns true when `amount` can be spent from the Beezie wallet without the balance going negative. */
   canAfford: (amount: number) => boolean;
-  /** Deducts `amount` from the balance. Caller must check `canAfford` first. */
+  /** Deducts `amount` from the Beezie wallet. Caller must check `canAfford` first. */
   deduct: (amount: number) => void;
-  /** Adds `amount` to the balance. */
+  /** Adds `amount` to the Beezie wallet. */
   credit: (amount: number) => void;
 }
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
-/** Provides the user's Beezie wallet balance, shared by the header and the purchase flow. */
+/** Provides the user's Beezie + external wallet balances, shared by the header and the purchase flow. */
 export function WalletProvider({ children }: PropsWithChildren) {
-  const [balance, setBalance] = useState(INITIAL_BALANCE);
+  const [beezieBalance, setBeezieBalance] = useState(INITIAL_BEEZIE_BALANCE);
+  const [externalBalance] = useState(INITIAL_EXTERNAL_BALANCE);
 
   const canAfford = useCallback(
-    (amount: number) => amount <= balance,
-    [balance],
+    (amount: number) => amount <= beezieBalance,
+    [beezieBalance],
   );
 
   const deduct = useCallback((amount: number) => {
-    setBalance((current) => current - amount);
+    setBeezieBalance((current) => current - amount);
   }, []);
 
   const credit = useCallback((amount: number) => {
-    setBalance((current) => current + amount);
+    setBeezieBalance((current) => current + amount);
   }, []);
 
   const value = useMemo(
-    () => ({ balance, canAfford, deduct, credit }),
-    [balance, canAfford, deduct, credit],
+    () => ({
+      beezieBalance,
+      externalBalance,
+      balance: beezieBalance,
+      canAfford,
+      deduct,
+      credit,
+    }),
+    [beezieBalance, externalBalance, canAfford, deduct, credit],
   );
 
   return (

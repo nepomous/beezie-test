@@ -2,6 +2,7 @@ import renderer, { act } from "react-test-renderer";
 
 import { WalletProvider } from "../../context/WalletContext";
 import type { ComponentProps } from "react";
+import { pokemonGoldClaw } from "../../mocks/clawMachines";
 import { CreditDebitSimulationModal } from "../CreditDebitSimulationModal";
 import { PaymentModal } from "../PaymentModal";
 
@@ -41,6 +42,7 @@ function renderPaymentModal(
           onConfirm={onConfirm}
           machineId="pokemon-gold-claw"
           machineName="Pokémon Gold Claw"
+          machineIcon={pokemonGoldClaw.iconAsset}
           quantity={1}
           totalPrice={500}
           pointsPerPull={500}
@@ -101,6 +103,9 @@ describe("PaymentModal", () => {
   });
 
   it("keeps external wallet selectable but blocks Confirm while it's selected", () => {
+    // At the default totalPrice (500), Beezie wallet (1000) and external
+    // wallet (25000) can both afford it, so external is a real, selectable
+    // option here — this test only checks that selecting it doesn't confirm.
     const { tree, onConfirm } = renderPaymentModal();
 
     act(() => {
@@ -111,26 +116,57 @@ describe("PaymentModal", () => {
     });
 
     const confirmButton = tree.root.findByProps({ testID: "confirm-button" });
-    expect(confirmButton.props.disabled).toBe(true);
+    expect(confirmButton.props.disabled).toBeFalsy();
 
     act(() => {
       confirmButton.props.onPress();
     });
+    // External wallet purchases aren't implemented as a real payment flow
+    // yet, so Confirm is a no-op safety net once it's actually reachable.
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("shows an error and doesn't confirm when the Beezie wallet balance can't cover the total", async () => {
-    const { tree, onConfirm } = renderPaymentModal({ totalPrice: 1500 });
+  it("auto-selects external wallet and disables Beezie wallet when Beezie's balance can't cover the total", () => {
+    // Beezie wallet starts at 1000, external wallet at 25000.
+    const { tree } = renderPaymentModal({ totalPrice: 1500 });
 
-    await act(async () => {
-      tree.root.findByProps({ testID: "confirm-button" }).props.onPress();
-      await jest.advanceTimersByTimeAsync(1000);
-    });
+    const beezieOption = findOptionPressable(
+      tree,
+      "payment-option-beezie-wallet",
+    );
+    const externalOption = findOptionPressable(
+      tree,
+      "payment-option-external-wallet",
+    );
 
-    expect(
-      tree.root.findByProps({ testID: "payment-error" }).props.children,
-    ).toBe("Insufficient balance. Please top up your Beezie wallet.");
-    expect(onConfirm).not.toHaveBeenCalled();
+    expect(beezieOption.props.disabled).toBe(true);
+    expect(beezieOption.props.onPress).toBeUndefined();
+    expect(externalOption.props.style[1]).toBeTruthy();
+    expect(externalOption.props.disabled).toBeFalsy();
+  });
+
+  it("falls back to credit/debit and disables both wallets when neither balance covers the total", () => {
+    const { tree } = renderPaymentModal({ totalPrice: 30000 });
+
+    const beezieOption = findOptionPressable(
+      tree,
+      "payment-option-beezie-wallet",
+    );
+    const externalOption = findOptionPressable(
+      tree,
+      "payment-option-external-wallet",
+    );
+    const creditOption = findOptionPressable(
+      tree,
+      "payment-option-credit-debit",
+    );
+
+    expect(beezieOption.props.disabled).toBe(true);
+    expect(externalOption.props.disabled).toBe(true);
+    expect(creditOption.props.style[1]).toBeTruthy();
+
+    const confirmButton = tree.root.findByProps({ testID: "confirm-button" });
+    expect(confirmButton.props.disabled).toBeFalsy();
   });
 
   it("confirms a valid Beezie wallet payment and calls onConfirm with the pull result", async () => {

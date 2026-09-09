@@ -49,10 +49,13 @@ npm run web
 ## Implementation status
 
 - Payment is represented by `PaymentModal`, supporting the Beezie wallet
-  (real balance/deduction), a placeholder external wallet (always $0, so
-  it's disabled), and a simulated credit/debit flow via
-  `CreditDebitSimulationModal`. Promo codes are not connected to real
-  services (see "Scope decisions" below).
+  (real balance/deduction), an external wallet with its own fixed
+  balance (not deducted on purchase — see "Scope decisions" below), and a
+  simulated credit/debit flow via `CreditDebitSimulationModal`. The
+  default selected method is auto-picked by whichever can afford the
+  total (Beezie, then external, then credit/debit), recalculated whenever
+  the total or either balance changes. Promo codes are not connected to
+  real services (see "Scope decisions" below).
 - After confirming payment, `WhatYouCanPullScreen` previews the machine's
   item pool (crossfading one item at a time) while the pull result loads,
   right before the claw opening animation plays.
@@ -76,11 +79,21 @@ A few product surfaces referenced in the mock data or UI are intentionally
 left as visual placeholders rather than fully implemented, since they'd
 each represent a separate feature area beyond what this challenge covers:
 
-- **External wallet linking**: the payment modal shows an "External
-  wallet" option with a real UI affordance, but it's hard-coded to a $0
-  balance and disabled. Wiring this up would require an actual external
-  wallet integration (OAuth-style linking flow, balance sync), which has
-  no meaningful mock equivalent without inventing a fictional provider.
+- **External wallet linking**: the payment modal shows a real "External
+  wallet" option with its own balance (see below), but there's no actual
+  external wallet integration behind it (OAuth-style linking flow,
+  balance sync with a real provider) — the balance is just a fixed number
+  seeded in `WalletContext`, which has no meaningful mock equivalent
+  without inventing a fictional provider.
+- **External wallet balance is fixed, not spent**: the external wallet
+  now has a real balance ($25,000, set in `WalletContext`) that's used to
+  decide eligibility and the auto-selected payment method, exactly like
+  the Beezie wallet. Unlike the Beezie wallet, though, that balance is
+  **not** deducted after a purchase confirmed with it. Implementing real
+  deduction would require deciding on and mocking an external "source of
+  truth" for that balance that doesn't exist yet — the wallet never had a
+  real withdrawal/linking flow proposed, so there's nothing to deduct
+  against or reconcile with.
 - **Promo codes**: "Apply promo code" now has a real `TextInput` + "Apply"
   button, but no code is actually valid — pressing Apply always shows
   "That code is not valid or has expired.", regardless of input (including

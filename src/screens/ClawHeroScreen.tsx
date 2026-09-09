@@ -311,8 +311,7 @@ export function ClawHeroScreen() {
           setIsPaymentOpen(false);
           setPendingPullResult(result);
         }}
-        machineId={machine.id}
-        machineName={machine.name}
+        machine={machine}
         quantity={quantity}
         totalPrice={totalPrice}
         pointsPerPull={machine.pointsPerPull}

@@ -17,7 +17,7 @@ import {
   MODAL_OVERLAY_PADDING,
 } from "../theme/modalCard";
 import { shape } from "../theme/shape";
-import type { ClawItem, PullResult } from "../types/claw";
+import type { ClawItem, ClawMachine, PullResult } from "../types/claw";
 
 export type PurchaseFlowStage = "payment" | "whatYouCanPull" | null;
 
@@ -26,8 +26,11 @@ interface PurchaseFlowModalProps {
   // PaymentModal ("Review & pay") props.
   onClose: () => void;
   onConfirm: (result: PullResult) => void;
-  machineId: string;
-  machineName: string;
+  /**
+   * The full claw machine being purchased, not just its id/name — needed so
+   * `PaymentModal`'s order summary can show the machine's own `iconAsset`.
+   */
+  machine: ClawMachine;
   quantity: number;
   totalPrice: number;
   pointsPerPull: number;
@@ -77,8 +80,7 @@ export function PurchaseFlowModal({
   stage,
   onClose,
   onConfirm,
-  machineId,
-  machineName,
+  machine,
   quantity,
   totalPrice,
   pointsPerPull,
@@ -242,8 +244,9 @@ export function PurchaseFlowModal({
                 visible
                 onClose={onClose}
                 onConfirm={onConfirm}
-                machineId={machineId}
-                machineName={machineName}
+                machineId={machine.id}
+                machineName={machine.name}
+                machineIcon={machine.iconAsset}
                 quantity={quantity}
                 totalPrice={totalPrice}
                 pointsPerPull={pointsPerPull}

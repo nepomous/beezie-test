@@ -5,6 +5,7 @@ import { renderHook, act } from "@testing-library/react-native";
 import { useWallet, WalletProvider } from "../WalletContext";
 
 const INITIAL_BALANCE = 1000;
+const INITIAL_EXTERNAL_BALANCE = 25000;
 
 function renderWallet() {
   return renderHook(() => useWallet(), { wrapper: WalletProvider });
@@ -15,6 +16,13 @@ describe("WalletContext", () => {
     const { result } = await renderWallet();
 
     expect(result.current.balance).toBe(INITIAL_BALANCE);
+  });
+
+  it("exposes beezieBalance (aliased by balance) and externalBalance", async () => {
+    const { result } = await renderWallet();
+
+    expect(result.current.beezieBalance).toBe(INITIAL_BALANCE);
+    expect(result.current.externalBalance).toBe(INITIAL_EXTERNAL_BALANCE);
   });
 
   it("credit(amount) adds to the balance", async () => {

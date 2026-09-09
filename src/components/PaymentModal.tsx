@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -9,7 +8,6 @@ import {
   View,
 } from "react-native";
 
-import summaryImage from "../assets/solana-claw.webp";
 import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { purchasePull } from "../services/clawService";
@@ -20,7 +18,7 @@ import {
   MODAL_OVERLAY_PADDING,
 } from "../theme/modalCard";
 import { radius, shape } from "../theme/shape";
-import type { PaymentMethod, PullResult } from "../types/claw";
+import type { PaymentMethod, PullResult, SvgIcon } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 import { CreditDebitSimulationModal } from "./CreditDebitSimulationModal";
 
@@ -30,6 +28,8 @@ interface PaymentModalProps {
   onConfirm: (result: PullResult) => void;
   machineId: string;
   machineName: string;
+  /** Selected claw machine's own icon, shown in the order summary. */
+  machineIcon: SvgIcon;
   quantity: number;
   totalPrice: number;
   pointsPerPull: number;
@@ -42,14 +42,30 @@ interface PaymentModalProps {
   renderAsModal?: boolean;
 }
 
-// Fixed placeholder balance — external wallet linking isn't implemented yet.
-const EXTERNAL_WALLET_BALANCE = 0;
+/** Picks the first payment method with enough balance for `totalPrice`, prioritizing Beezie wallet, then external wallet, falling back to credit/debit. */
+function pickDefaultMethod(
+  totalPrice: number,
+  beezieBalance: number,
+  externalBalance: number,
+): PaymentMethod {
+  if (beezieBalance >= totalPrice) {
+    return "beezie-wallet";
+  }
+  if (externalBalance >= totalPrice) {
+    return "external-wallet";
+  }
+  return "credit-debit";
+}
 
 /**
  * "Review & pay" modal: lets the user pick a payment method (Beezie wallet,
  * external wallet, or credit/debit) and confirms the purchase. Beezie wallet
- * deducts from the shared wallet balance; external wallet is always empty
- * (disabled); credit/debit opens a simulated gateway modal.
+ * deducts from the shared wallet balance; external wallet has its own
+ * (currently static) balance; either is disabled with an "Insufficient
+ * funds" message when it can't cover the total; credit/debit opens a
+ * simulated gateway modal. The default selection is whichever wallet can
+ * afford the total first (Beezie, then external), recalculated whenever the
+ * total or either balance changes.
  */
 export function PaymentModal({
   visible,
@@ -57,22 +73,44 @@ export function PaymentModal({
   onConfirm,
   machineId,
   machineName,
+  machineIcon,
   quantity,
   totalPrice,
   pointsPerPull,
   renderAsModal = true,
 }: PaymentModalProps) {
   const { isMobile } = useResponsive();
-  const { balance, canAfford, deduct } = useWallet();
-  const [selectedMethod, setSelectedMethod] =
-    useState<PaymentMethod>("beezie-wallet");
+  const { beezieBalance, externalBalance, canAfford, deduct } = useWallet();
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(() =>
+    pickDefaultMethod(totalPrice, beezieBalance, externalBalance),
+  );
+  // Tracks the inputs the current `selectedMethod` was auto-picked from, so
+  // we can recompute it (adjust state during render) if the total or either
+  // balance changes, without re-running on every unrelated render.
+  const [autoSelectInputs, setAutoSelectInputs] = useState({
+    totalPrice,
+    beezieBalance,
+    externalBalance,
+  });
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreditDebitOpen, setIsCreditDebitOpen] = useState(false);
   const [creditDebitError, setCreditDebitError] = useState<string | null>(null);
 
+  if (
+    autoSelectInputs.totalPrice !== totalPrice ||
+    autoSelectInputs.beezieBalance !== beezieBalance ||
+    autoSelectInputs.externalBalance !== externalBalance
+  ) {
+    setAutoSelectInputs({ totalPrice, beezieBalance, externalBalance });
+    setSelectedMethod(
+      pickDefaultMethod(totalPrice, beezieBalance, externalBalance),
+    );
+  }
+
   const totalPoints = pointsPerPull * quantity;
-  const isExternalWalletDisabled = EXTERNAL_WALLET_BALANCE < totalPrice;
+  const isBeezieWalletDisabled = beezieBalance < totalPrice;
+  const isExternalWalletDisabled = externalBalance < totalPrice;
 
   const resetAndClose = () => {
     setError(null);
@@ -87,13 +125,13 @@ export function PaymentModal({
       return;
     }
 
-    if (selectedMethod === "external-wallet") {
-      // Confirm is disabled in this case, this is just a safety net.
+    if (selectedMethod === "beezie-wallet" && !canAfford(totalPrice)) {
+      setError("Insufficient balance. Please top up your Beezie wallet.");
       return;
     }
 
-    if (!canAfford(totalPrice)) {
-      setError("Insufficient balance. Please top up your Beezie wallet.");
+    if (selectedMethod === "external-wallet" && isExternalWalletDisabled) {
+      // Confirm is disabled in this case, this is just a safety net.
       return;
     }
 
@@ -101,7 +139,9 @@ export function PaymentModal({
     setError(null);
     try {
       const result = await purchasePull(machineId, quantity, selectedMethod);
-      deduct(totalPrice);
+      if (selectedMethod === "beezie-wallet") {
+        deduct(totalPrice);
+      }
       onConfirm(result);
     } catch (err) {
       setError(
@@ -140,7 +180,8 @@ export function PaymentModal({
 
   const isConfirmDisabled =
     isPurchasing ||
-    (selectedMethod === "external-wallet" && isExternalWalletDisabled);
+    (selectedMethod === "external-wallet" && isExternalWalletDisabled) ||
+    (selectedMethod === "beezie-wallet" && isBeezieWalletDisabled);
 
   const cardContent = (
     <View style={styles.card}>
@@ -165,7 +206,13 @@ export function PaymentModal({
               ]}
               onPress={() => {
                 if (selectedMethod === "credit-debit") {
-                  setSelectedMethod("beezie-wallet");
+                  setSelectedMethod(
+                    pickDefaultMethod(
+                      totalPrice,
+                      beezieBalance,
+                      externalBalance,
+                    ),
+                  );
                 }
               }}
             >
@@ -202,6 +249,7 @@ export function PaymentModal({
             <Text style={styles.sectionLabel}>Summary</Text>
             <SummaryCard
               machineName={machineName}
+              machineIcon={machineIcon}
               quantity={quantity}
               totalPrice={totalPrice}
               totalPoints={totalPoints}
@@ -221,16 +269,19 @@ export function PaymentModal({
               <View style={styles.walletCardsRow}>
                 <WalletOptionCard
                   label="Beezie wallet"
-                  valueLabel={formatCurrency(balance)}
+                  valueLabel={formatCurrency(beezieBalance)}
                   selected={selectedMethod === "beezie-wallet"}
                   onPress={() => setSelectedMethod("beezie-wallet")}
+                  disabled={isBeezieWalletDisabled}
+                  insufficientFunds={isBeezieWalletDisabled}
                 />
                 <WalletOptionCard
                   label="External wallet"
-                  valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
+                  valueLabel={formatCurrency(externalBalance)}
                   selected={selectedMethod === "external-wallet"}
                   onPress={() => setSelectedMethod("external-wallet")}
-                  muted
+                  disabled={isExternalWalletDisabled}
+                  insufficientFunds={isExternalWalletDisabled}
                 />
               </View>
             </View>
@@ -244,16 +295,34 @@ export function PaymentModal({
             <PaymentOption
               testID="payment-option-beezie-wallet"
               label="Beezie wallet"
-              valueLabel={formatCurrency(balance)}
+              valueLabel={
+                isBeezieWalletDisabled
+                  ? undefined
+                  : formatCurrency(beezieBalance)
+              }
+              subLabel={
+                isBeezieWalletDisabled ? "Insufficient funds" : undefined
+              }
+              subLabelVariant="danger"
               selected={selectedMethod === "beezie-wallet"}
               onPress={() => setSelectedMethod("beezie-wallet")}
+              disabled={isBeezieWalletDisabled}
             />
             <PaymentOption
               testID="payment-option-external-wallet"
               label="External wallet"
-              valueLabel={formatCurrency(EXTERNAL_WALLET_BALANCE)}
+              valueLabel={
+                isExternalWalletDisabled
+                  ? undefined
+                  : formatCurrency(externalBalance)
+              }
+              subLabel={
+                isExternalWalletDisabled ? "Insufficient funds" : undefined
+              }
+              subLabelVariant="danger"
               selected={selectedMethod === "external-wallet"}
               onPress={() => setSelectedMethod("external-wallet")}
+              disabled={isExternalWalletDisabled}
             />
             <PaymentOption
               testID="payment-option-credit-debit"
@@ -268,6 +337,7 @@ export function PaymentModal({
             <Text style={styles.sectionLabel}>Summary</Text>
             <SummaryCard
               machineName={machineName}
+              machineIcon={machineIcon}
               quantity={quantity}
               totalPrice={totalPrice}
               totalPoints={totalPoints}
@@ -342,8 +412,11 @@ interface PaymentOptionProps {
   label: string;
   valueLabel?: string;
   subLabel?: string;
+  /** "danger" renders `subLabel` (e.g. "Insufficient funds") in the warning color instead of the default muted one. */
+  subLabelVariant?: "muted" | "danger";
   selected: boolean;
   onPress: () => void;
+  disabled?: boolean;
   testID?: string;
 }
 
@@ -351,15 +424,22 @@ function PaymentOption({
   label,
   valueLabel,
   subLabel,
+  subLabelVariant = "muted",
   selected,
   onPress,
+  disabled,
   testID,
 }: PaymentOptionProps) {
   return (
     <Pressable
       testID={testID}
-      style={[styles.option, selected && styles.optionSelected]}
-      onPress={onPress}
+      style={[
+        styles.option,
+        selected && styles.optionSelected,
+        disabled && styles.optionDisabled,
+      ]}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
     >
       <View style={styles.optionLeft}>
         <View style={[styles.radio, selected && styles.radioSelected]}>
@@ -367,7 +447,16 @@ function PaymentOption({
         </View>
         <View>
           <Text style={styles.optionLabel}>{label}</Text>
-          {subLabel && <Text style={styles.optionSubLabel}>{subLabel}</Text>}
+          {subLabel && (
+            <Text
+              style={[
+                styles.optionSubLabel,
+                subLabelVariant === "danger" && styles.optionSubLabelDanger,
+              ]}
+            >
+              {subLabel}
+            </Text>
+          )}
         </View>
       </View>
       {valueLabel && <Text style={styles.optionValue}>{valueLabel}</Text>}
@@ -377,6 +466,7 @@ function PaymentOption({
 
 interface SummaryCardProps {
   machineName: string;
+  machineIcon: SvgIcon;
   quantity: number;
   totalPrice: number;
   totalPoints: number;
@@ -386,6 +476,7 @@ interface SummaryCardProps {
 
 function SummaryCard({
   machineName,
+  machineIcon: MachineIcon,
   quantity,
   totalPrice,
   totalPoints,
@@ -395,7 +486,9 @@ function SummaryCard({
     return (
       <View style={styles.summaryCard}>
         <View style={styles.summaryItemRow}>
-          <Image source={summaryImage} style={styles.summaryImage} />
+          <View style={styles.summaryImage}>
+            <MachineIcon width={32} height={32} />
+          </View>
           <View style={styles.summaryItemInfo}>
             <Text style={styles.summaryItemName}>{machineName}</Text>
             <Text style={styles.summaryQuantityText}>Quantity: {quantity}</Text>
@@ -416,7 +509,9 @@ function SummaryCard({
   return (
     <View style={styles.summaryCard}>
       <View style={styles.summaryItemRow}>
-        <Image source={summaryImage} style={styles.summaryImage} />
+        <View style={styles.summaryImage}>
+          <MachineIcon width={32} height={32} />
+        </View>
         <View style={styles.summaryItemInfo}>
           <Text style={styles.summaryItemName}>{machineName}</Text>
           <Text style={styles.summaryItemPrice}>
@@ -447,8 +542,9 @@ interface WalletOptionCardProps {
   valueLabel: string;
   selected: boolean;
   onPress: () => void;
-  /** External wallet: always shows a placeholder $0 balance. */
-  muted?: boolean;
+  disabled?: boolean;
+  /** Shows "Insufficient funds" in place of `valueLabel` when true. */
+  insufficientFunds?: boolean;
 }
 
 function WalletOptionCard({
@@ -456,24 +552,32 @@ function WalletOptionCard({
   valueLabel,
   selected,
   onPress,
-  muted,
+  disabled,
+  insufficientFunds,
 }: WalletOptionCardProps) {
   return (
     <Pressable
-      style={[styles.walletCard, selected && styles.walletCardSelected]}
-      onPress={onPress}
+      style={[
+        styles.walletCard,
+        selected && styles.walletCardSelected,
+        disabled && styles.optionDisabled,
+      ]}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
     >
       <View style={styles.walletCardHeader}>
         <View style={[styles.radio, selected && styles.radioSelected]}>
           {selected && <View style={styles.radioDot} />}
         </View>
-        <Text style={[styles.walletCardLabel, muted && styles.walletCardMuted]}>
-          {label}
-        </Text>
+        <Text style={styles.walletCardLabel}>{label}</Text>
       </View>
-      <Text style={[styles.walletCardValue, muted && styles.walletCardMuted]}>
-        {valueLabel}
-      </Text>
+      {insufficientFunds ? (
+        <Text style={styles.walletCardInsufficientText}>
+          Insufficient funds
+        </Text>
+      ) : (
+        <Text style={styles.walletCardValue}>{valueLabel}</Text>
+      )}
     </Pressable>
   );
 }
@@ -581,8 +685,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  walletCardMuted: {
-    color: colors.textMuted,
+  walletCardInsufficientText: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: "600",
   },
   coinflowPlaceholder: {
     minHeight: 120,
@@ -654,6 +760,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
+  optionDisabled: {
+    opacity: 0.5,
+  },
+  optionSubLabelDanger: {
+    color: colors.danger,
+  },
   summaryCard: {
     borderRadius: shape.secondaryCard,
     borderWidth: 1,
@@ -672,6 +784,8 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: radius.sm,
     backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   summaryItemInfo: {
     flex: 1,

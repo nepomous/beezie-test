@@ -2,6 +2,7 @@ import renderer, { act } from "react-test-renderer";
 import { Text } from "react-native";
 
 import { WalletProvider } from "../../context/WalletContext";
+import { pokemonGoldClaw } from "../../mocks/clawMachines";
 import type { ClawItem } from "../../types/claw";
 import {
   PurchaseFlowModal,
@@ -30,8 +31,7 @@ function renderFlow(stage: PurchaseFlowStage) {
           stage={stage}
           onClose={jest.fn()}
           onConfirm={jest.fn()}
-          machineId="pokemon-gold-claw"
-          machineName="Pokémon Gold Claw"
+          machine={pokemonGoldClaw}
           quantity={1}
           totalPrice={10}
           pointsPerPull={100}
@@ -83,8 +83,7 @@ describe("PurchaseFlowModal", () => {
             stage="payment"
             onClose={jest.fn()}
             onConfirm={jest.fn()}
-            machineId="pokemon-gold-claw"
-            machineName="Pokémon Gold Claw"
+            machine={pokemonGoldClaw}
             quantity={1}
             totalPrice={10}
             pointsPerPull={100}
@@ -104,8 +103,7 @@ describe("PurchaseFlowModal", () => {
             stage="whatYouCanPull"
             onClose={jest.fn()}
             onConfirm={jest.fn()}
-            machineId="pokemon-gold-claw"
-            machineName="Pokémon Gold Claw"
+            machine={pokemonGoldClaw}
             quantity={1}
             totalPrice={10}
             pointsPerPull={100}
