@@ -270,6 +270,11 @@ export function getClawMachineById(id: string): ClawMachine | undefined {
   return clawMachines.find((machine) => machine.id === id);
 }
 
+/** Looks up a machine by its URL `slug` (e.g. "pokemon-gold") — distinct from `id`. */
+export function getClawMachineBySlug(slug: string): ClawMachine | undefined {
+  return clawMachines.find((machine) => machine.slug === slug);
+}
+
 /** Preview list for "More Claw Machines", derived from `clawMachines` (excludes `excludeId`). */
 export function getMoreClawMachines(
   excludeId: string = pokemonGoldClaw.id,

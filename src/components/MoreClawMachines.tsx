@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ClawMachineSummary } from "../mocks/clawMachines";
@@ -11,6 +12,8 @@ interface MoreClawMachinesProps {
 
 /** Preview row for other claw machines; tapping one navigates to its detail screen. */
 export function MoreClawMachines({ machines }: MoreClawMachinesProps) {
+  const router = useRouter();
+
   if (machines.length === 0) {
     return null;
   }
@@ -29,7 +32,7 @@ export function MoreClawMachines({ machines }: MoreClawMachinesProps) {
               accessibilityLabel={`${machine.name}, ${formatCurrency(machine.pricePerPull)}`}
               style={styles.card}
               onPress={() => {
-                // TODO: router.push to this machine's detail route (machine.slug) once it exists.
+                router.push(`/claw/${machine.slug}`);
               }}
             >
               <View style={styles.iconChip}>

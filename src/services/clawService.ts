@@ -1,5 +1,6 @@
 import {
   getClawMachineById,
+  getClawMachineBySlug,
   getMoreClawMachines as getMoreClawMachinesMock,
 } from "../mocks/clawMachines";
 import type { ClawMachineSummary } from "../mocks/clawMachines";
@@ -47,12 +48,12 @@ function drawItem(machine: ClawMachine): ClawItem {
   return pickRandomItem(candidates.length > 0 ? candidates : machine.itemPool);
 }
 
-export async function getClawMachine(id: string): Promise<ClawMachine> {
+export async function getClawMachine(slug: string): Promise<ClawMachine> {
   await randomDelay();
 
-  const machine = getClawMachineById(id);
+  const machine = getClawMachineBySlug(slug);
   if (!machine) {
-    throw new Error(`Claw machine not found: ${id}`);
+    throw new Error(`Claw machine not found: ${slug}`);
   }
 
   return machine;
@@ -63,9 +64,11 @@ export async function getRecentPulls(machineId: string): Promise<RecentPull[]> {
   return getRecentPullsByMachineId(machineId);
 }
 
-export async function getMoreClawMachines(): Promise<ClawMachineSummary[]> {
+export async function getMoreClawMachines(
+  excludeId?: string,
+): Promise<ClawMachineSummary[]> {
   await randomDelay();
-  return getMoreClawMachinesMock();
+  return getMoreClawMachinesMock(excludeId);
 }
 
 export async function purchasePull(

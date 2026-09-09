@@ -20,14 +20,14 @@ describe("clawService", () => {
   });
 
   describe("getClawMachine", () => {
-    it("returns the matching machine for a valid id", async () => {
-      const promise = getClawMachine("pokemon-gold-claw");
+    it("returns the matching machine for a valid slug", async () => {
+      const promise = getClawMachine("pokemon-gold");
       await jest.advanceTimersByTimeAsync(1000);
 
       await expect(promise).resolves.toEqual(pokemonGoldClaw);
     });
 
-    it("rejects for an id that doesn't exist", async () => {
+    it("rejects for a slug that doesn't exist", async () => {
       const promise = getClawMachine("does-not-exist");
       // Attach the rejection handler before advancing timers so the
       // rejection (which fires while the timer resolves) isn't briefly

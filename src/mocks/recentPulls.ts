@@ -1,71 +1,93 @@
-import { pokemonGoldClaw } from "./clawMachines";
-import type { RecentPull } from "../types/claw";
+import { getClawMachineById, pokemonGoldClaw } from "./clawMachines";
+import type { ClawItem, RecentPull } from "../types/claw";
 
-const itemByName = (name: string) => {
-  const item = pokemonGoldClaw.itemPool.find(
-    (candidate) => candidate.name === name,
-  );
-  if (!item) {
-    throw new Error(`Mock item not found: ${name}`);
-  }
-  return item;
-};
+interface RecentPullTemplate {
+  id: string;
+  itemName: string;
+  userDisplayName: string;
+  timestamp: string;
+}
 
-export const recentPulls: RecentPull[] = [
+const recentPullTemplates: RecentPullTemplate[] = [
   {
     id: "pull-001",
-    item: itemByName("Blastoise Shadowless Foil"),
+    itemName: "Blastoise Shadowless Foil",
     userDisplayName: "AshK.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:42:00.000Z",
   },
   {
     id: "pull-002",
-    item: itemByName("Eevee Community Day"),
+    itemName: "Eevee Community Day",
     userDisplayName: "MistyW.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:35:00.000Z",
   },
   {
     id: "pull-003",
-    item: itemByName("Pikachu Surfing VMAX"),
+    itemName: "Pikachu Surfing VMAX",
     userDisplayName: "BrockS.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:28:00.000Z",
   },
   {
     id: "pull-004",
-    item: itemByName("Caterpie Basic"),
+    itemName: "Caterpie Basic",
     userDisplayName: "GaryO.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:20:00.000Z",
   },
   {
     id: "pull-005",
-    item: itemByName("Mewtwo Cosmic Holo #001"),
+    itemName: "Mewtwo Cosmic Holo #001",
     userDisplayName: "RedT.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:12:00.000Z",
   },
   {
     id: "pull-006",
-    item: itemByName("Jigglypuff Sing Foil"),
+    itemName: "Jigglypuff Sing Foil",
     userDisplayName: "DawnP.",
-    paidValue: 500,
     timestamp: "2026-09-04T13:05:00.000Z",
   },
   {
     id: "pull-007",
-    item: itemByName("Lucario Steel Aura"),
+    itemName: "Lucario Steel Aura",
     userDisplayName: "LeafG.",
-    paidValue: 500,
     timestamp: "2026-09-04T12:58:00.000Z",
   },
 ];
 
+function findItemByName(itemPool: ClawItem[], name: string): ClawItem {
+  const item = itemPool.find((candidate) => candidate.name === name);
+  if (!item) {
+    throw new Error(`Mock item not found: ${name}`);
+  }
+  return item;
+}
+
+function buildRecentPulls(itemPool: ClawItem[]): RecentPull[] {
+  return recentPullTemplates.map((template) => {
+    const item = findItemByName(itemPool, template.itemName);
+    return {
+      id: template.id,
+      item,
+      userDisplayName: template.userDisplayName,
+      // "Recent Pulls" shows the item's fair market value, not a paid amount.
+      paidValue: item.fairMarketValue,
+      timestamp: template.timestamp,
+    };
+  });
+}
+
+export const recentPulls: RecentPull[] = buildRecentPulls(
+  pokemonGoldClaw.itemPool,
+);
+
+/**
+ * All 4 machines currently share the same item pool, so the same recent-pull
+ * templates (item name, user, paid value) apply to any of them, resolved
+ * against that machine's own `itemPool` by name.
+ */
 export function getRecentPullsByMachineId(machineId: string): RecentPull[] {
-  if (machineId !== pokemonGoldClaw.id) {
+  const machine = getClawMachineById(machineId);
+  if (!machine) {
     return [];
   }
-  return recentPulls;
+  return buildRecentPulls(machine.itemPool);
 }

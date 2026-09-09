@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,11 +34,11 @@ import { radius, shape } from "../theme/shape";
 import type { ClawMachine, PullResult, RecentPull } from "../types/claw";
 import { formatCurrency } from "../utils/currency";
 
-const DEFAULT_MACHINE_ID = "pokemon-gold-claw";
 const TOP_ITEMS_COUNT = 6;
 const MAX_QUANTITY = 10;
 
 export function ClawHeroScreen() {
+  const { slug } = useLocalSearchParams<{ slug: string }>();
   const { isMobile } = useResponsive();
   const [machine, setMachine] = useState<ClawMachine | null>(null);
   const [recentPulls, setRecentPulls] = useState<RecentPull[]>([]);
@@ -62,11 +63,17 @@ export function ClawHeroScreen() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([
-      getClawMachine(DEFAULT_MACHINE_ID),
-      getRecentPulls(DEFAULT_MACHINE_ID),
-      getMoreClawMachines(),
-    ])
+    // The machine itself is looked up by `slug` (the URL segment), but
+    // recent pulls / other machines are keyed by the machine's internal
+    // `id` — so those two calls must wait until the machine resolves.
+    getClawMachine(slug)
+      .then((machineData) =>
+        Promise.all([
+          machineData,
+          getRecentPulls(machineData.id),
+          getMoreClawMachines(machineData.id),
+        ]),
+      )
       .then(([machineData, pullsData, moreMachinesData]) => {
         if (!isMounted) return;
         setMachine(machineData);
@@ -87,7 +94,7 @@ export function ClawHeroScreen() {
     return () => {
       isMounted = false;
     };
-  }, [loadAttempt]);
+  }, [loadAttempt, slug]);
 
   if (loadError) {
     return (
