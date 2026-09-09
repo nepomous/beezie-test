@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
 
 import { colors, rarityColors } from "../theme/colors";
@@ -40,14 +41,14 @@ export function OddsTable({ odds, averageValue }: OddsTableProps) {
           return (
             <View
               key={tier.rarity}
-              style={[
-                styles.tierCard,
-                {
-                  backgroundColor: tierColors.background,
-                  borderColor: tierColors.border,
-                },
-              ]}
+              style={[styles.tierCard, { borderColor: tierColors.border }]}
             >
+              <LinearGradient
+                colors={[tierColors.gradientStart, "transparent"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={[styles.tierLabel, { color: tierColors.text }]}>
                 {tier.label}
               </Text>
@@ -99,6 +100,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: 8,
     gap: 2,
+    overflow: "hidden",
   },
   tierLabel: {
     fontSize: 12,

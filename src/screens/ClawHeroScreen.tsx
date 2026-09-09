@@ -59,6 +59,7 @@ export function ClawHeroScreen() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [promoCode, setPromoCode] = useState("");
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [isPromoInputFocused, setIsPromoInputFocused] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -171,35 +172,6 @@ export function ClawHeroScreen() {
                 </Text>
               </View>
 
-              <View style={styles.promoRow}>
-                <TextInput
-                  style={styles.promoInput}
-                  placeholder="Enter Code"
-                  placeholderTextColor={colors.textMuted}
-                  value={promoCode}
-                  onChangeText={(text) => {
-                    setPromoCode(text);
-                    setPromoError(null);
-                  }}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                />
-                <Pressable
-                  style={styles.promoApplyButton}
-                  onPress={handleApplyPromoCode}
-                >
-                  <Text style={styles.promoApplyButtonText}>Apply</Text>
-                </Pressable>
-              </View>
-              {promoError && (
-                <Text style={styles.promoError}>{promoError}</Text>
-              )}
-
-              <OddsTable
-                odds={machine.odds}
-                averageValue={machine.averageValue}
-              />
-
               <View style={styles.startRow}>
                 <QuantityStepper
                   quantity={quantity}
@@ -226,6 +198,41 @@ export function ClawHeroScreen() {
                   another machine below.
                 </Text>
               )}
+
+              <Text style={styles.promoLabel}>Apply promo code</Text>
+              <View style={styles.promoRow}>
+                <TextInput
+                  style={[
+                    styles.promoInput,
+                    isPromoInputFocused && styles.promoInputFocused,
+                  ]}
+                  placeholder="Enter Code"
+                  placeholderTextColor={colors.textMuted}
+                  value={promoCode}
+                  onChangeText={(text) => {
+                    setPromoCode(text);
+                    setPromoError(null);
+                  }}
+                  onFocus={() => setIsPromoInputFocused(true)}
+                  onBlur={() => setIsPromoInputFocused(false)}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <Pressable
+                  style={styles.promoApplyButton}
+                  onPress={handleApplyPromoCode}
+                >
+                  <Text style={styles.promoApplyButtonText}>Apply</Text>
+                </Pressable>
+              </View>
+              {promoError && (
+                <Text style={styles.promoError}>{promoError}</Text>
+              )}
+
+              <OddsTable
+                odds={machine.odds}
+                averageValue={machine.averageValue}
+              />
 
               <MoreClawMachines machines={moreClawMachines} />
             </View>
@@ -446,11 +453,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  promoLabel: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 8,
+  },
   promoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   promoInput: {
     flex: 1,
@@ -463,16 +476,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     fontSize: 14,
   },
+  promoInputFocused: {
+    borderColor: colors.gold,
+  },
   promoApplyButton: {
     height: 44,
     paddingHorizontal: 20,
     borderRadius: shape.button,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
   },
   promoApplyButtonText: {
-    color: colors.background,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
   },

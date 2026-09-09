@@ -16,7 +16,7 @@ import ProfileImage from "../assets/mock_profile_image.svg";
 import { useWallet } from "../context/WalletContext";
 import { useResponsive } from "../hooks/useResponsive";
 import { colors } from "../theme/colors";
-import { radius } from "../theme/shape";
+import { radius, shape } from "../theme/shape";
 import { formatCurrency } from "../utils/currency";
 
 const NAV_ITEMS = [
@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { label: "More", active: false },
 ] as const;
 
-const DRAWER_WIDTH = 260;
+const DRAWER_HEIGHT = 360;
 
 function showComingSoonAlert() {
   Alert.alert("Screen coming soon!");
@@ -36,7 +36,7 @@ function showComingSoonAlert() {
 /**
  * Top navigation bar (logo, nav links, wallet balance, profile picture).
  * Desktop/web shows the nav links inline; mobile/responsive collapses them
- * into a hidden side menu opened via the Beezie icon button.
+ * into a hidden side menu opened via the hamburger button.
  */
 export function AppHeader() {
   const { isMobile } = useResponsive();
@@ -44,11 +44,11 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const [isMenuMounted, setIsMenuMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [translateX] = useState(() => new Animated.Value(-DRAWER_WIDTH));
+  const [menuAnim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    Animated.timing(translateX, {
-      toValue: isMenuOpen ? 0 : -DRAWER_WIDTH,
+    Animated.timing(menuAnim, {
+      toValue: isMenuOpen ? 1 : 0,
       duration: 220,
       useNativeDriver: true,
     }).start(({ finished }) => {
@@ -56,7 +56,7 @@ export function AppHeader() {
         setIsMenuMounted(false);
       }
     });
-  }, [isMenuOpen, translateX]);
+  }, [isMenuOpen, menuAnim]);
 
   const openMenu = () => {
     setIsMenuMounted(true);
@@ -64,6 +64,47 @@ export function AppHeader() {
   };
 
   const closeMenu = () => setIsMenuOpen(false);
+
+  // Drawer slides down from above the header; hamburger bars morph into an X, both driven by menuAnim.
+  const drawerTranslateY = menuAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-DRAWER_HEIGHT, 0],
+  });
+  const hamburgerTopBarStyle = {
+    transform: [
+      {
+        translateY: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 7],
+        }),
+      },
+      {
+        rotate: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: ["0deg", "45deg"],
+        }),
+      },
+    ],
+  };
+  const hamburgerMiddleBarStyle = {
+    opacity: menuAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+  };
+  const hamburgerBottomBarStyle = {
+    transform: [
+      {
+        translateY: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -7],
+        }),
+      },
+      {
+        rotate: menuAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: ["0deg", "-45deg"],
+        }),
+      },
+    ],
+  };
 
   const handleNavItemPress = (item: (typeof NAV_ITEMS)[number]) => {
     if (!item.active) {
@@ -87,6 +128,10 @@ export function AppHeader() {
       <>
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.leftSection}>
+            <BeezieLogo width={64} height={27} />
+          </View>
+          <View style={styles.mobileRightSection}>
+            {balanceSection}
             <Pressable
               onPress={openMenu}
               style={styles.menuButton}
@@ -94,11 +139,17 @@ export function AppHeader() {
               accessibilityRole="button"
               accessibilityLabel="Open menu"
             >
-              <BeezieIcon width={16} height={24} />
+              <Animated.View
+                style={[styles.hamburgerBar, hamburgerTopBarStyle]}
+              />
+              <Animated.View
+                style={[styles.hamburgerBar, hamburgerMiddleBarStyle]}
+              />
+              <Animated.View
+                style={[styles.hamburgerBar, hamburgerBottomBarStyle]}
+              />
             </Pressable>
-            <BeezieLogo width={64} height={27} />
           </View>
-          {balanceSection}
         </View>
 
         <Modal
@@ -115,10 +166,28 @@ export function AppHeader() {
               accessibilityLabel="Close menu"
             />
             <Animated.View
-              style={[styles.drawerPanel, { transform: [{ translateX }] }]}
+              style={[
+                styles.drawerPanel,
+                {
+                  paddingTop: insets.top + 16,
+                  transform: [{ translateY: drawerTranslateY }],
+                },
+              ]}
             >
               <View style={styles.drawerHeader}>
-                <BeezieLogo width={78} height={33} />
+                <BeezieLogo width={64} height={27} />
+                <View style={styles.drawerHeaderRight}>
+                  {balanceSection}
+                  <Pressable
+                    onPress={closeMenu}
+                    style={styles.closeButton}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close menu"
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
               </View>
               {NAV_ITEMS.map((item) => (
                 <Pressable
@@ -194,6 +263,13 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
+    gap: 5,
+  },
+  hamburgerBar: {
+    width: 20,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.textPrimary,
   },
   navRow: {
     position: "absolute",
@@ -224,6 +300,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 16,
   },
+  mobileRightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
   balancePill: {
     flexDirection: "row",
     alignItems: "center",
@@ -243,17 +324,37 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   drawerPanel: {
-    width: DRAWER_WIDTH,
-    height: "100%",
+    width: "100%",
     backgroundColor: colors.background,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: colors.border,
-    paddingTop: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
     paddingHorizontal: 24,
+    paddingBottom: 24,
     gap: 4,
   },
   drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 24,
+  },
+  drawerHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: shape.circle,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
   },
   drawerItem: {
     flexDirection: "row",

@@ -30,6 +30,8 @@ export const colors = {
 
 interface RarityColor {
   background: string;
+  /** Higher-alpha (~35%) tint used as the LinearGradient start color in `OddsTable` — `background` itself is too faint (12%) to read as a visible fade over the near-black screen background. */
+  gradientStart: string;
   border: string;
   text: string;
 }
@@ -38,26 +40,31 @@ interface RarityColor {
 export const rarityColors: Record<Rarity, RarityColor> = {
   "ultra-rare": {
     background: "rgba(245, 197, 24, 0.12)",
+    gradientStart: "rgba(245, 197, 24, 0.35)",
     border: "#F5C518",
     text: "#F5C518",
   },
   rare: {
     background: "rgba(185, 117, 240, 0.12)",
+    gradientStart: "rgba(185, 117, 240, 0.35)",
     border: "#B975F0",
     text: "#B975F0",
   },
   uncommon: {
     background: "rgba(74, 222, 128, 0.12)",
+    gradientStart: "rgba(74, 222, 128, 0.35)",
     border: "#4ADE80",
     text: "#4ADE80",
   },
   common: {
     background: "rgba(96, 165, 250, 0.12)",
+    gradientStart: "rgba(96, 165, 250, 0.35)",
     border: "#60A5FA",
     text: "#60A5FA",
   },
   base: {
     background: "rgba(156, 163, 175, 0.12)",
+    gradientStart: "rgba(156, 163, 175, 0.35)",
     border: "#9CA3AF",
     text: "#9CA3AF",
   },
