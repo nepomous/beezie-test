@@ -39,37 +39,90 @@ npm run web
 
 ## Current flow
 
-1. Load the Pokémon Gold Claw machine and its recent pulls.
-2. Choose a quantity from 1 to 10 and press **Start Now**.
-3. Review the mocked payment summary and confirm with the Beezie wallet.
-4. See the "What you can pull" preview screen while the pull result loads.
-5. Play the fullscreen claw opening animation.
-6. Reveal the pulled item(s), then keep or swap each item.
+1. Land on `/`, which redirects to `/claw/pokemon-gold` — the default claw
+   machine.
+2. Browse one of the 4 claw machines, each at its own `/claw/[slug]` route
+   (`pokemon-gold`, `tcg-platinum`, `tcg-silver`, `wildcard`), with its own
+   name, description, price, points, odds table, and "Top Items"/"Recent
+   Pulls" sections. "More Claw Machines" cards link to the other 3 machines
+   via real navigation (`router.push`, not a placeholder).
+3. Choose a quantity from 1 to 10 and press **Start Now** (disabled and
+   replaced with "Restocking Soon" for the out-of-stock Wildcard machine).
+4. Review the mocked payment summary and confirm with the auto-selected
+   payment method (Beezie wallet, external wallet, or simulated
+   credit/debit).
+5. See the "What you can pull" preview screen while the pull result loads.
+6. Play the fullscreen claw opening animation, with audio and a skip
+   button.
+7. Reveal the pulled item(s) within a 5-minute window, then keep or swap
+   each item before it expires.
 
 ## Implementation status
 
-- Payment is represented by `PaymentModal`, supporting the Beezie wallet
-  (real balance/deduction), an external wallet with its own fixed
-  balance (not deducted on purchase — see "Scope decisions" below), and a
-  simulated credit/debit flow via `CreditDebitSimulationModal`. The
-  default selected method is auto-picked by whichever can afford the
-  total (Beezie, then external, then credit/debit), recalculated whenever
-  the total or either balance changes. Promo codes are not connected to
-  real services (see "Scope decisions" below).
+- **4 claw machines, one route each**: `Pokémon Gold Claw` ($500/pull),
+  `TCG Platinum` ($500/pull), `TCG Silver` ($100/pull), and `Wildcard`
+  ($30/pull, out of stock) are defined in `src/mocks/clawMachines.ts` and
+  each rendered at its own `/claw/[slug]` route via
+  `getClawMachineBySlug()`. All 4 currently reuse the same `itemPool` and
+  opening video as `Pokémon Gold Claw` (see "Scope decisions" below).
+- **Shared, price-scaled odds table**: every machine's `OddsTier[]` is
+  derived by `deriveOddsTable()` in `src/mocks/clawMachines.ts` from a
+  single base table anchored to a $100 pull (TCG Silver's price). The
+  rarity chance percentages are identical across machines; only the
+  dollar value ranges scale linearly with `pricePerPull`.
+- **Out-of-stock machine**: `Wildcard` has `inStock: false`. Its "Start
+  Now" button is disabled and reads "Restocking Soon" instead.
+- **Promo codes**: a real `TextInput` + "Apply" button exist, but every
+  code is rejected with "That code is not valid or has expired." (see
+  "Scope decisions" below).
+- **Dual wallet**: `WalletContext` tracks a real Beezie wallet balance
+  (deducted on purchase, credited on swap) and a fixed $25,000 external
+  wallet balance that's used for payment-method eligibility but never
+  deducted (see "Scope decisions" below).
+- Payment is represented by `PaymentModal`, supporting the Beezie wallet,
+  the external wallet, and a simulated credit/debit flow via
+  `CreditDebitSimulationModal`. The default selected method is
+  auto-picked by whichever can afford the total (Beezie, then external,
+  then credit/debit), recalculated whenever the total or either balance
+  changes. The order summary shows the selected machine's own icon
+  (`machine.iconAsset`) instead of a fixed image.
 - After confirming payment, `WhatYouCanPullScreen` previews the machine's
   item pool (crossfading one item at a time) while the pull result loads,
   right before the claw opening animation plays.
 - Pull results are generated locally by `src/services/clawService.ts`
   using the machine's rarity weights and item pool.
-- A pull has a shared 15-minute reveal window in the service model.
+- A pull has a shared **5-minute** reveal window (`REVEAL_WINDOW_MS` in
+  `clawService.ts`).
 - Multi-item pulls (QTY > 1) are revealed with `RevealMultipleModal`: a
-  responsive grid of all pulled items, a "Select all" / "Clear" control,
-  a shared countdown that auto-expires the pull, and both per-item and
-  bulk swap actions, each going through an async loading state before
-  crediting the wallet.
+  responsive grid of all pulled items, all **deselected by default**, a
+  "Select all" / "Clear" control, a shared countdown that pulses once
+  under a minute remains, and both per-item and bulk swap actions, each
+  going through an async loading state before crediting the wallet.
+  Swapped items **stay visible** in the grid in a disabled "Swapped"
+  state instead of disappearing. If the countdown reaches zero before
+  the user acts, any items not yet swapped are automatically credited to
+  the vault and the grid locks into a read-only "Expired" state —
+  **without closing the modal**.
 - Single-item pulls (QTY = 1) use `RevealSingleModal`, with the same
   functional parity as the multi-item flow: real swap/keep actions, an
   async loading state, and the `SwapSuccessModal` confirmation.
+- The claw opening animation (`ClawOpeningAnimation`) plays with its
+  embedded audio audible by default. If autoplay-with-audio is blocked by
+  the platform (detected heuristically — see the component's comments),
+  it retries muted instead of leaving the screen stuck. A skip button
+  lets the user jump straight to the reveal without waiting for the
+  video.
+- The quantity stepper (`QuantityStepper`) plays a short synthesized
+  "menu tick" click sound on every "+"/"-" press (see "Scope decisions"
+  below).
+- The mobile header (`AppHeader`) collapses nav links into a dropdown
+  menu opened via a hamburger button that morphs into an X. The menu
+  slides down from the top (not a side panel) inside a React Native
+  `Modal`, which duplicates the logo, balance, and close ("X") controls
+  inside the modal itself, since a `Modal` always renders above any
+  content outside of it.
+- Odds tier cards (`OddsTable`) render a subtle rarity-colored gradient
+  background (`LinearGradient`, left-to-right, color → transparent).
 - Kept (non-swapped) items are tracked in `VaultContext`, alongside the
   wallet balance/points tracked in `WalletContext`.
 
@@ -100,10 +153,6 @@ each represent a separate feature area beyond what this challenge covers:
   empty input). A real implementation would need a promo code service
   (validation rules, expiry, stacking rules with existing pricing) that
   felt out of scope for a pull/reveal-focused technical exercise.
-- **"More Claw Machines" navigation**: tapping a machine card in this
-  section is wired to accept the tapped machine, but doesn't navigate yet
-  (left as a commented `TODO` in `MoreClawMachines.tsx`) — routing to a
-  machine detail/switch flow is a separate follow-up.
 - **Item pool reuse across machines**: `TCG Platinum`, `TCG Silver`, and
   `Wildcard` all reuse the same `itemPool` (and opening video) as
   `Pokémon Gold Claw` rather than each having a bespoke catalog. That
@@ -113,7 +162,6 @@ each represent a separate feature area beyond what this challenge covers:
   value range ($15–$30). This is acceptable because item draws are
   weighted by rarity, not by matching an exact value range, but it's
   worth calling out explicitly rather than leaving it implicit.
-
 - **Quantity stepper click sound**: pressing "+"/"-" on the pull quantity
   stepper plays a short 8-bit-style "menu tick" blip. This is a fully
   synthesized, generic UI click sound (`src/assets/sounds/menu-tick.wav`)
@@ -162,36 +210,51 @@ service delays with fake timers. `__mocks__/expo-video.js` provides the
 
 ```text
 app/_layout.tsx                  # Expo Router root layout
-app/index.tsx                    # Expo Router entry route, renders ClawHeroScreen
-src/screens/ClawHeroScreen.tsx   # Main screen and flow orchestration
+app/index.tsx                    # Redirects "/" to "/claw/pokemon-gold"
+app/claw/[slug].tsx              # Machine detail route, renders ClawHeroScreen
+src/screens/ClawHeroScreen.tsx   # Main screen and flow orchestration (looks up machine by slug)
 src/components/                  # Odds, quantity, payment, video, and reveal UI
-  ItemCard.tsx                    #   Shared item image/name/rarity card
+  AppHeader.tsx                  #   Top nav; mobile collapses into a top-down dropdown Modal
+  ItemCard.tsx                    #   Shared item image/name/rarity card (incl. "Swapped" state)
+  MoreClawMachines.tsx           #   "More Claw Machines" cards, navigates via router.push
+  OddsTable.tsx                  #   Gradient-backed rarity odds cards
+  QuantityStepper.tsx            #   +/- pull quantity control, plays a synthesized click SFX
+  PaymentModal.tsx               #   "Review & pay", auto-selects payment method by balance
   PurchaseFlowModal.tsx           #   Payment -> "What you can pull" stage container
   WhatYouCanPullScreen.tsx        #   Item-pool preview shown before the opening animation
-  RevealMultipleModal.tsx         #   Grid reveal + bulk/individual swap for QTY > 1
+  ClawOpeningAnimation.tsx       #   Fullscreen opening video with audio + skip button
+  RevealMultipleModal.tsx         #   Grid reveal + bulk/individual swap for QTY > 1, 5-min timer
   RevealSingleModal.tsx           #   Single-item reveal + swap for QTY = 1
   SwapSuccessModal.tsx            #   Swap confirmation (amount/points credited)
 src/services/clawService.ts      # Mock machine, wallet, and pull operations
-src/context/WalletContext.tsx    # Wallet balance/points state
+src/context/WalletContext.tsx    # Beezie + external wallet balance/points state
 src/contexts/VaultContext.tsx    # Kept (non-swapped) items state
 src/config/points.ts             # Swap point calculation
-src/mocks/                       # Machine and recent-pull data
-src/types/                       # Domain models and payment types
+src/mocks/clawMachines.ts        # 4 machines, shared item pool, and derived odds tables
+src/types/claw.ts                # Domain models (ClawMachine, PullResult, PaymentMethod, ...)
 src/hooks/                       # Shared responsive hooks
 src/theme/                       # Colors, breakpoints, shape, and modal-card tokens
 src/utils/                       # Currency formatting and simulated async delays
 src/assets/videos/               # Bundled opening-animation videos
+src/assets/sounds/                # Synthesized SFX (menu-tick.wav for the quantity stepper)
 __tests__/                       # App-level tests (rendered via Expo Router)
 ```
 
 ## Video assets
 
-The opening animation uses [`expo-video`](https://docs.expo.dev/versions/v57.0.0/sdk/video/).
-Remote URLs are supported by the component, while the current mock machine
-falls back to bundled files:
+The opening animation uses [`expo-video`](https://docs.expo.dev/versions/v57.0.0/sdk/video/),
+playing with its embedded audio audible by default. Remote URLs are
+supported by the component, while every mock machine currently falls back
+to the same bundled files:
 
 - `src/assets/videos/Reveal web.mp4` for Web
 - `src/assets/videos/BlueReveal_Mobile.mp4` for Android and iOS
+
+If autoplay-with-audio is blocked by the platform (detected heuristically,
+since browsers don't always surface this as an error — see
+`ClawOpeningAnimation.tsx`), playback retries muted instead of leaving the
+screen stuck. A skip button lets the user bypass the video entirely and
+jump straight to the reveal.
 
 ## Responsive behavior
 
@@ -235,7 +298,8 @@ challenge, we chose not to pursue that path.
 
 ### What's left in place
 
-- File-based routing via Expo Router (`app/_layout.tsx`, `app/index.tsx`).
+- File-based routing via Expo Router (`app/_layout.tsx`, `app/index.tsx`,
+  `app/claw/[slug].tsx`).
 - Static HTML generation for the app shell (`web.output: "static"`),
   verified with `npx expo export -p web`.
 - The investigation above, so the limitation is documented rather than
