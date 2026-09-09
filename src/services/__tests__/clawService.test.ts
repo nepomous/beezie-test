@@ -1,4 +1,7 @@
-import { pokemonGoldClaw, moreClawMachines } from "../../mocks/clawMachines";
+import {
+  pokemonGoldClaw,
+  getMoreClawMachines as getMoreClawMachinesMock,
+} from "../../mocks/clawMachines";
 import { recentPulls } from "../../mocks/recentPulls";
 import {
   getClawMachine,
@@ -120,7 +123,7 @@ describe("clawService", () => {
       const promise = getMoreClawMachines();
       await jest.advanceTimersByTimeAsync(1000);
 
-      await expect(promise).resolves.toEqual(moreClawMachines);
+      await expect(promise).resolves.toEqual(getMoreClawMachinesMock());
     });
   });
 });

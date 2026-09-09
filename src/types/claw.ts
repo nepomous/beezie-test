@@ -1,4 +1,10 @@
+import type { FC } from "react";
+import type { SvgProps } from "react-native-svg";
+
 export type Rarity = "ultra-rare" | "rare" | "uncommon" | "common" | "base";
+
+/** SVG icon component type, matching the `*.svg` module declaration in `assets.d.ts`. */
+export type SvgIcon = FC<SvgProps>;
 
 export interface OddsTier {
   rarity: Rarity;
@@ -18,13 +24,16 @@ export interface ClawItem {
 
 export interface ClawMachine {
   id: string;
+  slug: string; // used in the machine detail URL, e.g. "pokemon-gold" — distinct from `id`
   name: string; // "Pokémon Gold Claw"
   description: string;
   heroImageUrl: string;
+  iconAsset: SvgIcon; // machine's own icon, e.g. src/assets/icons/500_box_icon.svg
   videoOpeningUrl: string; // local or remote asset
   pricePerPull: number;
   pointsPerPull: number;
   averageValue: number;
+  inStock: boolean;
   odds: OddsTier[];
   itemPool: ClawItem[]; // used for draws and for "Top Items"
 }

@@ -8,6 +8,7 @@ interface QuantityStepperProps {
   onChange: (quantity: number) => void;
   min?: number;
   max?: number;
+  disabled?: boolean;
 }
 
 /** Numeric +/- stepper used to pick the pull quantity, clamped to [min, max]. */
@@ -16,9 +17,10 @@ export function QuantityStepper({
   onChange,
   min = 1,
   max = 10,
+  disabled = false,
 }: QuantityStepperProps) {
-  const canDecrease = quantity > min;
-  const canIncrease = quantity < max;
+  const canDecrease = !disabled && quantity > min;
+  const canIncrease = !disabled && quantity < max;
 
   return (
     <View style={styles.container}>

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -55,6 +56,8 @@ export function ClawHeroScreen() {
   const [revealResult, setRevealResult] = useState<PullResult | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,6 +121,12 @@ export function ClawHeroScreen() {
     .slice(0, TOP_ITEMS_COUNT);
 
   const totalPrice = machine.pricePerPull * quantity;
+  const isInStock = machine.inStock;
+
+  const handleApplyPromoCode = () => {
+    // No promo code is valid — this is intentional, see README "Scope decisions".
+    setPromoError("That code is not valid or has expired.");
+  };
 
   return (
     <View style={styles.screen}>
@@ -155,7 +164,29 @@ export function ClawHeroScreen() {
                 </Text>
               </View>
 
-              <Text style={styles.promoLabel}>Apply promo code</Text>
+              <View style={styles.promoRow}>
+                <TextInput
+                  style={styles.promoInput}
+                  placeholder="Enter Code"
+                  placeholderTextColor={colors.textMuted}
+                  value={promoCode}
+                  onChangeText={(text) => {
+                    setPromoCode(text);
+                    setPromoError(null);
+                  }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <Pressable
+                  style={styles.promoApplyButton}
+                  onPress={handleApplyPromoCode}
+                >
+                  <Text style={styles.promoApplyButtonText}>Apply</Text>
+                </Pressable>
+              </View>
+              {promoError && (
+                <Text style={styles.promoError}>{promoError}</Text>
+              )}
 
               <OddsTable
                 odds={machine.odds}
@@ -167,14 +198,27 @@ export function ClawHeroScreen() {
                   quantity={quantity}
                   onChange={setQuantity}
                   max={MAX_QUANTITY}
+                  disabled={!isInStock}
                 />
                 <Pressable
-                  style={styles.startButton}
+                  style={[
+                    styles.startButton,
+                    !isInStock && styles.startButtonDisabled,
+                  ]}
                   onPress={() => setIsPaymentOpen(true)}
+                  disabled={!isInStock}
                 >
-                  <Text style={styles.startButtonText}>Start Now</Text>
+                  <Text style={styles.startButtonText}>
+                    {isInStock ? "Start Now" : "Restocking Soon"}
+                  </Text>
                 </Pressable>
               </View>
+              {!isInStock && (
+                <Text style={styles.restockingMessage}>
+                  This machine is out of inventory and is being restocked. Try
+                  another machine below.
+                </Text>
+              )}
 
               <MoreClawMachines machines={moreClawMachines} />
             </View>
@@ -396,10 +440,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  promoLabel: {
-    color: colors.textSecondary,
-    fontSize: 13,
+  promoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 8,
+  },
+  promoInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceAlt,
+    fontSize: 14,
+  },
+  promoApplyButton: {
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: shape.button,
+    backgroundColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoApplyButtonText: {
+    color: colors.background,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  promoError: {
+    color: colors.danger,
+    fontSize: 12,
+    marginTop: 4,
   },
   startRow: {
     flexDirection: "row",
@@ -414,6 +488,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold,
     alignItems: "center",
     justifyContent: "center",
+  },
+  startButtonDisabled: {
+    backgroundColor: colors.goldMuted,
+  },
+  restockingMessage: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginTop: 8,
   },
   startButtonText: {
     color: colors.background,

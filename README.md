@@ -52,7 +52,7 @@ npm run web
   (real balance/deduction), a placeholder external wallet (always $0, so
   it's disabled), and a simulated credit/debit flow via
   `CreditDebitSimulationModal`. Promo codes are not connected to real
-  services.
+  services (see "Scope decisions" below).
 - After confirming payment, `WhatYouCanPullScreen` previews the machine's
   item pool (crossfading one item at a time) while the pull result loads,
   right before the claw opening animation plays.
@@ -81,17 +81,25 @@ each represent a separate feature area beyond what this challenge covers:
   balance and disabled. Wiring this up would require an actual external
   wallet integration (OAuth-style linking flow, balance sync), which has
   no meaningful mock equivalent without inventing a fictional provider.
-- **Promo codes**: "Apply promo code" is currently a static label with no
-  input, validation, or discount logic. A real implementation would need
-  a promo code service (validation rules, expiry, stacking rules with
-  existing pricing) that felt out of scope for a pull/reveal-focused
-  technical exercise.
+- **Promo codes**: "Apply promo code" now has a real `TextInput` + "Apply"
+  button, but no code is actually valid — pressing Apply always shows
+  "That code is not valid or has expired.", regardless of input (including
+  empty input). A real implementation would need a promo code service
+  (validation rules, expiry, stacking rules with existing pricing) that
+  felt out of scope for a pull/reveal-focused technical exercise.
 - **"More Claw Machines" navigation**: tapping a machine card in this
-  section shows a "coming soon" alert instead of navigating to a machine
-  detail/switch flow. The app only ships one machine's worth of mock data
-  (`pokemonGoldClaw`); building out multi-machine navigation would mean
-  duplicating the entire purchase/reveal flow's data model for machines
-  that don't have distinct content yet.
+  section is wired to accept the tapped machine, but doesn't navigate yet
+  (left as a commented `TODO` in `MoreClawMachines.tsx`) — routing to a
+  machine detail/switch flow is a separate follow-up.
+- **Item pool reuse across machines**: `TCG Platinum`, `TCG Silver`, and
+  `Wildcard` all reuse the same `itemPool` (and opening video) as
+  `Pokémon Gold Claw` rather than each having a bespoke catalog. That
+  pool's `fairMarketValue`s were calibrated for Pokémon Gold's $500/pull
+  odds ranges and don't automatically rescale for the cheaper machines —
+  e.g. the pool's cheapest item ($10) falls below Wildcard's own "Base"
+  value range ($15–$30). This is acceptable because item draws are
+  weighted by rarity, not by matching an exact value range, but it's
+  worth calling out explicitly rather than leaving it implicit.
 
 If any of these turn out to be worth prioritizing, happy to discuss scope
 and time trade-offs.

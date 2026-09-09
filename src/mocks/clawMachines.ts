@@ -1,4 +1,8 @@
-import type { ClawItem, ClawMachine, OddsTier } from "../types/claw";
+import Box500Icon from "../assets/icons/500_box_icon.svg";
+import Box30Icon from "../assets/icons/30_box_icon.svg";
+import BlackBallIcon from "../assets/icons/black_ball_icon.svg";
+import WhiteBallIcon from "../assets/icons/white_ball_icon.svg";
+import type { ClawItem, ClawMachine, OddsTier, SvgIcon } from "../types/claw";
 
 /**
  * Lightweight shape used for the "More Claw Machines" list, where only
@@ -6,49 +10,76 @@ import type { ClawItem, ClawMachine, OddsTier } from "../types/claw";
  */
 export interface ClawMachineSummary {
   id: string;
+  slug: string;
   name: string;
   heroImageUrl: string;
+  iconAsset: SvgIcon;
   pricePerPull: number;
   averageValue: number;
+  inStock: boolean;
 }
 
-const pokemonGoldOdds: OddsTier[] = [
+const BASE_PRICE_PER_PULL = 100;
+
+/**
+ * Odds table anchored to a $100 pull (TCG Silver). Percentages are the same
+ * across every machine; value ranges scale linearly with `pricePerPull` via
+ * `deriveOddsTable()`.
+ */
+const baseOddsTable: OddsTier[] = [
   {
     rarity: "ultra-rare",
     label: "Ultra-Rare",
-    chancePercent: 0.72,
-    valueRangeMin: 8001,
+    chancePercent: 0.2,
+    valueRangeMin: 1600.2,
     valueRangeMax: null,
   },
   {
     rarity: "rare",
     label: "Rare",
-    chancePercent: 4.28,
-    valueRangeMin: 2001,
-    valueRangeMax: 8000,
+    chancePercent: 0.72,
+    valueRangeMin: 1000.2,
+    valueRangeMax: 1600,
   },
   {
     rarity: "uncommon",
     label: "Uncommon",
-    chancePercent: 15,
-    valueRangeMin: 501,
-    valueRangeMax: 2000,
+    chancePercent: 3.48,
+    valueRangeMin: 300.2,
+    valueRangeMax: 1000,
   },
   {
     rarity: "common",
     label: "Common",
-    chancePercent: 30,
-    valueRangeMin: 101,
-    valueRangeMax: 500,
+    chancePercent: 21.08,
+    valueRangeMin: 100.2,
+    valueRangeMax: 300,
   },
   {
     rarity: "base",
     label: "Base",
-    chancePercent: 50,
-    valueRangeMin: 1,
+    chancePercent: 74.52,
+    valueRangeMin: 50,
     valueRangeMax: 100,
   },
 ];
+
+function scaleValue(value: number, scale: number): number {
+  return Math.round(value * scale * 100) / 100;
+}
+
+/** Derives a machine's odds table by scaling the $100-pull base table's value ranges. */
+function deriveOddsTable(pricePerPull: number): OddsTier[] {
+  const scale = pricePerPull / BASE_PRICE_PER_PULL;
+  return baseOddsTable.map((tier) => ({
+    ...tier,
+    valueRangeMin: scaleValue(tier.valueRangeMin, scale),
+    valueRangeMax:
+      tier.valueRangeMax === null
+        ? null
+        : scaleValue(tier.valueRangeMax, scale),
+  }));
+}
 
 const pokemonGoldItemPool: ClawItem[] = [
   {
@@ -146,52 +177,104 @@ const pokemonGoldItemPool: ClawItem[] = [
 
 export const pokemonGoldClaw: ClawMachine = {
   id: "pokemon-gold-claw",
+  slug: "pokemon-gold",
   name: "Pokémon Gold Claw",
   description:
-    "A golden claw machine filled with rare Pokémon cards. Every pull guarantees a physical item, from common to ultra-rare.",
+    "Every pull is a statement piece, every grail secured with Brink's and tokenized on Beezie.",
   heroImageUrl:
     "https://placehold.co/800x800/0d0d0d/F5C518.png?text=Pok%C3%A9mon+Gold+Claw",
+  iconAsset: Box500Icon,
   videoOpeningUrl: "/assets/videos/claw-opening.mp4",
   pricePerPull: 500,
   pointsPerPull: 500,
-  averageValue: 420,
-  odds: pokemonGoldOdds,
+  averageValue: 505,
+  inStock: true,
+  odds: deriveOddsTable(500),
   itemPool: pokemonGoldItemPool,
 };
 
-export const clawMachines: ClawMachine[] = [pokemonGoldClaw];
+export const tcgPlatinumClaw: ClawMachine = {
+  id: "tcg-platinum-claw",
+  slug: "tcg-platinum",
+  name: "TCG Platinum",
+  description:
+    "Platinum-tier slabs only. Every pull is graded, vaulted and ready to trade the moment it lands.",
+  heroImageUrl:
+    "https://placehold.co/800x800/0d0d0d/F5C518.png?text=TCG+Platinum",
+  iconAsset: WhiteBallIcon,
+  videoOpeningUrl: "/assets/videos/claw-opening.mp4",
+  pricePerPull: 500,
+  pointsPerPull: 500,
+  averageValue: 512,
+  inStock: true,
+  odds: deriveOddsTable(500),
+  itemPool: pokemonGoldItemPool,
+};
 
-export const moreClawMachines: ClawMachineSummary[] = [
-  {
-    id: "tcg-platinum-claw-1",
-    name: "TCG Platinum",
-    heroImageUrl:
-      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=TCG+Platinum",
-    pricePerPull: 500,
-    averageValue: 505,
-  },
-  {
-    id: "tcg-platinum-claw-2",
-    name: "TCG Platinum",
-    heroImageUrl:
-      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=TCG+Platinum",
-    pricePerPull: 500,
-    averageValue: 505,
-  },
-  {
-    id: "wildcard-claw",
-    name: "Wildcard",
-    heroImageUrl:
-      "https://placehold.co/400x400/0d0d0d/F5C518.png?text=Wildcard",
-    pricePerPull: 30,
-    averageValue: 25,
-  },
+export const tcgSilverClaw: ClawMachine = {
+  id: "tcg-silver-claw",
+  slug: "tcg-silver",
+  name: "TCG Silver",
+  description:
+    "The everyday claw. Lower stakes, same vault, same instant swap the second you reveal.",
+  heroImageUrl:
+    "https://placehold.co/800x800/0d0d0d/F5C518.png?text=TCG+Silver",
+  iconAsset: BlackBallIcon,
+  videoOpeningUrl: "/assets/videos/claw-opening.mp4",
+  pricePerPull: 100,
+  pointsPerPull: 100,
+  averageValue: 102,
+  inStock: true,
+  odds: deriveOddsTable(100),
+  itemPool: pokemonGoldItemPool,
+};
+
+export const wildcardClaw: ClawMachine = {
+  id: "wildcard-claw",
+  slug: "wildcard",
+  name: "Wildcard",
+  description:
+    "Thirty dollars, one pull, no idea what comes out. Restocks the moment it empties.",
+  heroImageUrl: "https://placehold.co/800x800/0d0d0d/F5C518.png?text=Wildcard",
+  iconAsset: Box30Icon,
+  videoOpeningUrl: "/assets/videos/claw-opening.mp4",
+  pricePerPull: 30,
+  pointsPerPull: 30,
+  averageValue: 31,
+  inStock: false,
+  odds: deriveOddsTable(30),
+  itemPool: pokemonGoldItemPool,
+};
+
+export const clawMachines: ClawMachine[] = [
+  pokemonGoldClaw,
+  tcgPlatinumClaw,
+  tcgSilverClaw,
+  wildcardClaw,
 ];
+
+function toSummary(machine: ClawMachine): ClawMachineSummary {
+  return {
+    id: machine.id,
+    slug: machine.slug,
+    name: machine.name,
+    heroImageUrl: machine.heroImageUrl,
+    iconAsset: machine.iconAsset,
+    pricePerPull: machine.pricePerPull,
+    averageValue: machine.averageValue,
+    inStock: machine.inStock,
+  };
+}
 
 export function getClawMachineById(id: string): ClawMachine | undefined {
   return clawMachines.find((machine) => machine.id === id);
 }
 
-export function getMoreClawMachines(): ClawMachineSummary[] {
-  return moreClawMachines;
+/** Preview list for "More Claw Machines", derived from `clawMachines` (excludes `excludeId`). */
+export function getMoreClawMachines(
+  excludeId: string = pokemonGoldClaw.id,
+): ClawMachineSummary[] {
+  return clawMachines
+    .filter((machine) => machine.id !== excludeId)
+    .map(toSummary);
 }
